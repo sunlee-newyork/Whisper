@@ -1,0 +1,65 @@
+#whisper_incoming {
+	z-index:10000;
+	position:fixed;
+	width:475px;
+	height:16px;
+	bottom:0;
+	left:0;
+	border:1px solid rgb(180,180,180);
+	border-left:0;
+	border-top-right-radius:4px;
+	background-color:rgb(230,230,230);
+	display:none;
+	padding-left:4px;
+	overflow:auto;
+	text-align:left;
+}
+
+#whisper_incoming::-webkit-scrollbar { 
+  display:none; 
+}
+
+.chat-event {
+	height:17px;
+	line-height:17px;
+}
+
+.chat-message {
+	height:17px;
+	line-height:17px;
+}
+
+.whisper-text {
+	color:rgb(79,79,79);
+	font-size:11px;
+	font-family:sans-serif;
+}
+
+#whisper_outgoing {
+	z-index:10000;
+	position:fixed;
+	width:475px;
+	height:16px;
+	bottom:0;
+	right:0;
+	border:1px solid rgb(180,180,180);
+	border-right:0;
+	border-top-left-radius:4px;
+	background-color:rgb(230,230,230);
+	display:none;
+}
+
+#whisper_outgoing::-webkit-scrollbar {
+	display:none;
+}
+
+#outgoing {
+	width:477px;
+	height:17px;
+	line-height:17px;
+}
+
+#outgoing.middle:focus {
+  outline-width:0;
+}
+
