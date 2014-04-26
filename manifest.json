@@ -1,0 +1,45 @@
+{
+  "manifest_version": 2,
+
+  "name": "Whisper",
+
+  "description": "Message your friends in class or at work.",
+
+  "version": "1",
+
+  "browser_action": {
+    "default_icon": "icon.png"
+  },
+
+  "options_page": "settings.html",
+
+  "permissions": [  
+    "tabs",
+    "<all_urls>",
+    "storage"
+  ],
+
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+
+  "content_scripts": [
+    {
+      "matches": [ "<all_urls>" ],
+      "css": [
+        "message.css"
+      ],
+      "js": [
+        "scripts/jquery-1.11.0.min.js",
+        "scripts/strophejs/strophe.js",
+        "scripts/flXHR/code/flensed-1.0/deploy/flXHR.js",
+        "scripts/strophe.flxhr.js",
+        "whisper.js",
+        "message.js"
+      ],
+      "run_at": "document_end",
+      "all_frames": false
+    }
+  ]
+}
