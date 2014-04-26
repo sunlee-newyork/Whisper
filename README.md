@@ -1,7 +1,7 @@
 Whisper
 =======
 
-XMPP chat client browser extension with hotkey functionalities.
+XMPP chat client Chrome browser extension with hotkey functionalities.
 
 
 
