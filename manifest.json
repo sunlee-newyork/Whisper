@@ -32,8 +32,8 @@
       ],
       "js": [
         "scripts/jquery-1.11.0.min.js",
-        "scripts/strophejs/strophe.js",
-        "scripts/flXHR/code/flensed-1.0/deploy/flXHR.js",
+        "scripts/strophe.js",
+        "scripts/flXHR.js",
         "scripts/strophe.flxhr.js",
         "whisper.js",
         "message.js"
