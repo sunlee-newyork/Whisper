@@ -3,7 +3,7 @@
 
 function openOrFocusOptionsPage() {
 
-  var optionsUrl = chrome.extension.getURL('gab_options.html');
+  var optionsUrl = chrome.extension.getURL('settings.html');
 
   chrome.tabs.query({}, function(extensionTabs) {
     var found = false;
@@ -15,7 +15,7 @@ function openOrFocusOptionsPage() {
       }
     }
     if (found == false) {
-      chrome.tabs.create({url: "gab_options.html"});
+      chrome.tabs.create({url: "settings.html"});
     }
   });
 
