@@ -6,6 +6,7 @@
 // [DELETE?] var incomingDiv = "<div id='whisper_incoming'></div>"; (5/6/14)
 // [DELETE?] $('body').append(incomingDiv); (5/6/14)
 
+
 // INJECT OUTGOING CHAT BOX DIV
 // [DELETE] var outgoingDiv = document.createElement("div");
 // [DELETE] outgoingDiv.id = "whisper_outgoing";
@@ -93,6 +94,7 @@ var Whisper = {
       $('body').append(personDiv);
       // [DELETE?] $('#whisper_incoming').append(personDiv); (5/6/14)
       // [DELETE?] $('#chat-'+jid_id).fadeIn('fast'); (5/6/14)
+
       console.log('#chat-jid_id triggered.');
     }
 
@@ -284,6 +286,7 @@ $(document).ready(function() {
     console.log('sessionStorage JID/SID/RID detected.');
   
 /* [DELETE] I don't know why this was here to begin with... don't need JID and password for session attach (5/6/14)
+
     // GET FROM chrome.storage JID_Master/PASS_Master
     chrome.storage.sync.get([
       'jid_master',
@@ -769,11 +772,3 @@ $(document).on('click', function(event) {
     }
   }
 });
-
-
-
-
-
-
-
-

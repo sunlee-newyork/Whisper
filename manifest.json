@@ -32,7 +32,7 @@
       ],
       "js": [
         "scripts/jquery-1.11.0.min.js",
-        "scripts/strophejs/strophe.js",
+        "scripts/strophe.js",
         "whisper.js",
         "message.js"
       ],

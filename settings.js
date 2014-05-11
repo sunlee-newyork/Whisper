@@ -273,7 +273,6 @@ $(document).ready(function() {
 
 });
 
-
 // CONNECT EVENT \\
 $(document).bind('connect', function (ev, data) {
   Whisper.connection = new Strophe.Connection(
@@ -284,7 +283,7 @@ $(document).bind('connect', function (ev, data) {
 
 // CONNECTED EVENT \\
 $(document).bind('connected', function () {
-
+  $('#login-status').html('[Connected!]');
   console.log('Connected.');
   console.log(Whisper.connection);
 
@@ -397,4 +396,3 @@ $(window).bind('unload', function () {
   }
 });
 ////////////////////////////////////////////////////////////////
-

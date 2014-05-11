@@ -24,6 +24,10 @@
 	display:none;
 }
 
+#whisper_incoming::-webkit-scrollbar { 
+  display:none; 
+}
+
 .chat-event {
 	height:17px;
 	line-height:17px;
