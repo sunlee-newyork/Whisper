@@ -294,6 +294,7 @@ $(document).bind('connected', function () {
   //Whisper.connection.addHandler(Whisper.on_message, null, "message", "chat");
 
   // Manually save JID_master and PASS to chrome.storage here \\
+/* [DELETE] ************ chrome.storage => background page *************** (5/9/14)
   chrome.storage.sync.set({
     jid_master: Whisper.connection.authzid,
     pass_master: Whisper.connection.pass
@@ -301,6 +302,10 @@ $(document).bind('connected', function () {
     console.log('JID/PASS saved to chrome.storage');
     //console.log('Whisper.storage JID: '+Whisper.storage.jid_master+' and PASS: '+Whisper.storage.pass_master);
   });
+*/
+  // [ADDED] background page (5/9/14)
+  var bg = chrome.extension.getBackgroundPage();
+  bg.saveInfo(Whisper.connection.authzid, Whisper.connection.pass);
 });
 
 // ATTACH EVENT \\

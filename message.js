@@ -310,6 +310,7 @@ $(document).ready(function() {
     $(document).trigger('attach', Whisper.storage); 
 
   } else { // ELSE if JID/SID/RID are not set...
+    /* [DELETE] ************ chrome.storage => background page *************** (5/9/14)  
     chrome.storage.sync.get([
       'jid_master',
       'pass_master'
@@ -327,6 +328,22 @@ $(document).ready(function() {
       } else {
         console.log('No chrome.storage detected. Action stopped.');
         Whisper.del_storage();
+      }
+    }); 
+    */
+    // [ADDED] Get login info from background page (5/9/14)
+    chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+      Whisper.loginStorage.jid_master = request.jid;
+      Whisper.loginStorage.pass_master = request.pass;
+      console.log('JID_Master/PASS_Master retrieved from background page.');
+      console.log('loginStorage JID_Master: '+Whisper.loginStorage.jid_master+' and PASS_Master: '+Whisper.loginStorage.pass_master);
+      if (Whisper.loginStorage.jid_master && Whisper.loginStorage.pass_master) {
+        // Console.log outputs
+        console.log('No sessionStorage detected. (Connecting)');
+        // Trigger connect with outputs
+        $(document).trigger('connect', Whisper.loginStorage);
+      } else {
+        console.log('No background page login info detected. Action stopped.');
       }
     }); 
   }
@@ -524,6 +541,7 @@ $(document).bind('connected', function () {
   Whisper.connection.addHandler(Whisper.on_roster_changed, "jabber:iq:roster", "iq", "set");
   Whisper.connection.addHandler(Whisper.on_message, null, "message", "chat");
 
+/* [DELETE] ************ chrome.storage => background page *************** (5/9/14)  
   chrome.storage.sync.remove(['jid_master', 'pass_master'], function() {
     Whisper.loginStorage.jid_master = null;
     Whisper.loginStorage.pass_master = null;
@@ -532,6 +550,12 @@ $(document).bind('connected', function () {
       console.log('JID_Master: '+result.jid_master+' and Pass: '+result.pass_master);
     });
   });
+*/
+
+  // [ADDED] delete loginStorage after usage, no longer need it (5/9/14)
+  Whisper.loginStorage.jid_master = null;
+  Whisper.loginStorage.pass_master = null;
+  console.log('Whisper.loginStorage JID: '+Whisper.loginStorage.jid_master+' and PASS: '+Whisper.loginStorage.pass_master);
 });
 
 // ATTACH EVENT \\
