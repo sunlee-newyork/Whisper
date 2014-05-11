@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Whisper Options</title>
+	
+	<script src="scripts/jquery-1.11.0.min.js"></script>
+	<script src="scripts/strophejs/strophe.js"></script>
+	<!--<script src="scripts/flXHR/code/flensed-1.0/deploy/flXHR.js"></script>
+	<script src="scripts/strophe.flxhr.js"></script>-->
+
+	<script src="whisper.js"></script>
+  <script src="settings.js"></script>
+  <link rel="stylesheet" type="text/css" href="settings.css" media="screen"/>
+</head>
+<body>
+	<div class="container">
+		<div class="header">
+			<img class="icon" src="" /> <!-- Whisper icon goes here -->
+			<div class="text big">Whisper settings</div>
+		</div>
+		<div class="divide_bar"></div>
+		<div class="main">
+			<div class="section keyboard">
+				<span class="text medium">Keyboard Shortcuts</span><span class="text small">(Input 3 unique letters. Suggestion: For friends, use first 3 unique letters of their names.)</span>
+				<div class="option onoff">
+					<input type="checkbox" id="onoff_checkbox" />
+					<div class="text_small_container"><span class="text small">Turn on/off toggle hotkey</span></div>
+					<input class="input hotkey" id="onoff" /> <!-- Going to have to research how to assign pressed keys -->
+				</div>
+				<div class="option first">
+					<input type="checkbox" id="first_checkbox" />
+					<div class="text_small_container"><span class="text small">1st friend hotkey</span></div>
+					<input class="input hotkey" id="first" /> <!-- Going to have to research how to assign pressed keys -->
+					<span class="text small">Set to <span class="friend_link" id="first_link">no one (click to assign)</span></span>
+				</div>
+				<div class="option second">
+					<input type="checkbox" id="second_checkbox" />
+					<div class="text_small_container"><span class="text small">2nd friend hotkey</span></div>
+					<input class="input hotkey" id="second" /> <!-- Going to have to research how to assign pressed keys -->
+					<span class="text small">Set to <span class="friend_link" id="second_link">no one (click to assign)</span></span>
+				</div>
+				<div class="option third">
+					<input type="checkbox" id="third_checkbox" />
+					<div class="text_small_container"><span class="text small">3rd friend hotkey</span></div>
+					<input class="input hotkey" id="third" /> <!-- Going to have to research how to assign pressed keys -->
+					<span class="text small">Set to <span class="friend_link" id="third_link">no one (click to assign)</span></span>
+				</div>
+				<div class="option fourth">
+					<input type="checkbox" id="fourth_checkbox" />
+					<div class="text_small_container"><span class="text small">4th friend hotkey</span></div>
+					<input class="input hotkey" id="fourth" /> <!-- Going to have to research how to assign pressed keys -->
+					<span class="text small">Set to <span class="friend_link" id="fourth_link">no one (click to assign)</span></span>
+				</div>
+				<div class="option fifth">
+					<input type="checkbox" id="fifth_checkbox" />
+					<div class="text_small_container"><span class="text small">5th friend hotkey</span></div>
+					<input class="input hotkey" id="fifth" /> <!-- Going to have to research how to assign pressed keys -->
+					<span class="text small">Set to <span class="friend_link" id="fifth_link">no one (click to assign)</span></span>
+				</div>
+			</div>	
+			<div class="section other">
+				<span class="text medium">Other Options</span>
+				<div class="option timeout">
+					<input type="checkbox" id="timeout_checkbox" />
+					<div class="text_small_container"><span class="text small">Timeout (for afk)</span></div>
+					<select class="input" id="timeout">
+						<option>Select</option>
+						<option value="1800000">30 minutes</option>
+						<option value="900000">15 minutes</option>
+						<option value="600000">10 minutes</option>
+						<option value="300000">5 minutes</option> <!-- Need to set to default -->
+						<option value="180000">3 minutes</option>
+						<option value="60000">1 minute</option>
+					</select>
+				</div>
+				<div class="option fadeout">
+					<input type="checkbox" id="fadeout_checkbox" />
+					<div class="text_small_container"><span class="text small">Incoming message fade-out</span></div>
+					<select class="input" id="fadeout">
+						<option>Select</option>
+						<option value="30000">30 seconds</option>
+						<option value="20000">20 seconds</option>
+						<option value="15000">15 seconds</option>
+						<option value="10000">10 seconds</option>
+						<option value="5000">5 seconds</option>
+						<option value="3000">3 seconds</option> <!-- Need to set to default -->
+						<option value="2000">2 seconds</option>
+						<option value="1000">1 second</option>
+					</select>
+				</div>
+			</div>
+			<div class="section account">
+				<span class="text medium">Account Settings</span>
+				<div class="option user">
+					<div class="login_top">
+						<span class="text small">Currently logged in as <span id="user_login">no one.</span></span><!-- Need to add user here -->
+						<span id="status" class="text small status_text"> | &nbsp;&nbsp;<span id="login-status">Not Connected</span></span>
+						<span class="text small status_text">Session attached: <span id="attach-status">No</span></span>
+					</div>
+					<div class="login_bottom">	
+						<span class="text small login_text">Login: </span>
+						<input class="input" id="username" type="text" placeholder="Username" />
+						<input class="input" id="password" type="password" placeholder="Password" />
+						<button id="login_submit" type="button">Submit</button>
+					</div>
+					<span class="text small" id="disconnect">Log out</span>
+				</div>
+			</div>
+			<div class="section submit">
+				<input id="save" type="submit" value="Save" />
+				<span id="save_message" class="hidden">Options saved!</span>
+			</div>
+		</div>
+
+		<!-- HIDDEN ROSTER DIV -->
+		<div id="roster-area" class="hidden">
+			<span class="roster_title text medium">Choose a friend</span>
+			<div class="divide_bar list"></div>
+			<ul></ul>
+		</div>
+
+		<!-- [ADDED] HIDDEN ROSTER-ALERT DIV (5/6/14) -->
+		<div id="roster-alert" class="hidden">
+			<span id="roster-alert-text" class="text medium">Login first!</span>
+		</div>
+	</div>
+</body>
+</html>

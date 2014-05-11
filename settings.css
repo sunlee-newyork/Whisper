@@ -1,0 +1,154 @@
+a {
+	text-decoration:none;
+	color:rgb(30,100,255);
+}
+a:active {
+	text-decoration:none;
+	color:rgb(80,180,255);
+}
+
+.container {
+	position:relative;
+	width:850px;
+	margin:0 auto;
+}
+.header {
+	position:relative;
+	display:inline-block;
+	height:25px;
+}
+.text {
+	font-family:Helvetica, Verdana, sans-serif;
+}
+.text.big {
+	font-size:25px;
+}
+.text.medium {
+	font-size:20px;
+}
+.text.small {
+	font-size:14px;
+	margin-left:10px;
+}
+.text.small.status_text {
+	font-weight:bold;
+	display:inline-block;
+}
+.divide_bar {
+	position:relative;
+	width:100%;
+	height:1px;
+	border-bottom:2px solid rgb(150,150,150);
+	margin-top:20px;
+}
+.divide_bar.list {
+	margin-top:10px;
+	border-bottom:1px solid rgb(150,150,150);
+}
+.main {
+	position:relative;
+	width:100%;
+	top:40px;
+}
+.section {
+	position:relative;
+	margin-bottom:40px;
+}
+.section.submit {
+	left:40px;
+}
+.option {
+	margin-top:10px;
+	margin-left:40px;
+}
+.text_small_container {
+	display:inline-block;
+	width:300px;
+}
+.text_small_container_login {
+	display:inline-block;
+	width:initial;
+	margin-left:22px;
+}
+#status {
+	
+}
+.input {
+	width:150px;
+}
+.input.hotkey {
+	text-align:center;
+}
+#save {
+	font-size:20px;
+}
+#save_message {
+	color:rgb(60,150,40);
+	font-size:16px;
+	font-weight:bold;
+	font-family:Helvetica,Verdana,sans-serif;
+	padding-left:10px;
+}
+#user_login {
+	font-weight:bold;
+}
+.login_top, .login_bottom {
+	margin-bottom:10px;
+}
+#disconnect {
+	position:relative;
+	display:block;
+	width:50px;
+	top:5px;
+	color:rgb(30,100,255);
+}
+#disconnect:hover {
+	cursor:pointer;
+}
+#login-status, #attach-status {
+	font-weight:initial;
+	color:rgb(130,130,130);
+}
+.friend_link {
+	color:rgb(30,100,255);	
+}
+.friend_link:hover {
+	cursor:pointer;
+}
+/* ROSTER AREA */
+#roster-area {
+	position:fixed;
+	right:4%;
+	top:10%;
+	width:15%;
+	height:80%;
+	overflow:auto;
+}
+#roster-area ul {
+	list-style-type:none;
+	padding:0;
+	margin-left:0;
+}
+.roster-contact:hover {
+	background-color: #aaa;
+  color: white;
+  cursor:pointer;
+}
+.roster_title {
+	display:inline-block;
+	width:100%;
+	margin-top:10px;
+}
+#roster-alert {
+	position:fixed;
+	width:auto;
+	height:auto;
+	right:10%;
+	top:30%;
+}
+#roster-alert-text {
+	color:rgb(150,40,60);
+}
+.hidden {
+	display:none;
+}
