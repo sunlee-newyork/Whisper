@@ -3,204 +3,48 @@
 
 $(document).ready(function() {
 
-  // RESTORE ALL SAVED PREFERENCES
-  // (have to shape this up => value ONLY IF checkbox === true)
-  // [UPGRADE] too DRY, make Whisper method
+  // CHROME.STORAGE GET ALL SAVED PREFERENCES AND RESTORE \\
   chrome.storage.sync.get(function (result) {
-    // Get onoff_checkbox
-    if (result.onoff_checkbox === true) { 
-      $('#onoff_checkbox').prop('checked', true); 
-      // Get onoff value
-      if (result.onoff) {
-        // Loop through result per keycode, convert to character
-        var characters = "";
-        for (var x in result.onoff) {
-          var letter = String.fromCharCode(x);
-          characters += letter;
-        }
-        characters.split('').join(' '); // [FIX] buggy, no effect
-        $('#onoff').attr('value', characters); 
-      } else { 
-        $('#onoff').val(''); 
-        $('#onoff').attr('placeholder', 'Enter hotkey letters'); 
-      }
-    } else { 
-      $('#onoff_checkbox').prop('checked', false); 
-      $('#onoff').attr('placeholder', 'Enter hotkey letters');
-    }
-    
+    console.log('Chrome.storage result: ', result);
 
-    // Get first_checkbox
-    if (result.first_checkbox === true) { 
-      $('#first_checkbox').prop('checked', true); 
+    // [EDITED] DRYless version of initial fill-in (5/13/14)
+    var array = ['onoff', 'first', 'second', 'third', 'fourth', 'fifth', 'timeout', 'fadeout'];
 
-      // Get first value
-      if (result.first) {
-        // Loop through result per keycode, convert to character
-        var characters = "";
-        for (var x in result.first) {
-          var letter = String.fromCharCode(x);
-          characters += letter;
+    for (var i=0; i<array.length; i++) {
+      console.log(array[i]);
+      if (result[array[i]+'_checkbox'] === true) {
+        $('#'+array[i]+'_checkbox').prop('checked', true);
+        if (typeof result[array[i]] == 'string') {
+          if (result[array[i]]) {
+            $('#'+array[i]).val(result[array[i]]);  
+          } else {
+            $('#'+array[i]).val('Select');
+          }
+        } else if (typeof result[array[i]] == 'object') {
+          var characters = "";
+          for (var x in result[array[i]]) {
+            var letter = String.fromCharCode(x);
+            characters += letter;
+          }
+          characters.split('').join(' '); // [FIX] buggy, no effect
+          $('#'+array[i]).attr('value', characters);
+          if (result[array[i]+'_jid']) {
+            $('#'+array[i]+'_link').html(result[array[i]+'_name']+' (click to change)');
+            Whisper[array[i]+'_jid'] = result[array[i]+'_jid'];
+            Whisper[array[i]+'_name'] = result[array[i]+'_name'];
+          } else {
+            $('#'+array[i]+'_link').html('no one (click to assign)');
+          }
         }
-        characters.split('').join(' '); // [FIX] buggy, no effect
-        $('#first').attr('value', characters); 
-        $('#first_link').html(result.first_name+' (click to change)');
-        Whisper.first_jid = result.first_jid;
-        Whisper.first_name = result.first_name;
       } else {
-        $('#first').val('');
-        $('#first').attr('placeholder', 'Enter hotkey letters');
+        $('#'+array[i]+'_checkbox').prop('checked', false);
+        $('#'+array[i]).attr('placeholder', 'Enter hotkey letters');
       }
-    } else { 
-      $('#first_checkbox').prop('checked', false); 
-      $('#first_link').html('no one (click to assign)');
-      $('#first').attr('placeholder', 'Enter hotkey letters');
     }
 
-
-    // Get second_checkbox
-    if (result.second_checkbox === true) { 
-      $('#second_checkbox').prop('checked', true); 
-      // Get second value
-      if (result.second) {
-        // Loop through result per keycode, convert to character
-        var characters = "";
-        for (var x in result.second) {
-          var letter = String.fromCharCode(x);
-          characters += letter;
-        }
-        characters.split('').join(' '); // [FIX] buggy, no effect
-        $('#second').attr('value', characters);
-        $('#second_link').html(result.second_name+' (click to change)');
-        Whisper.second_jid = result.second_jid;
-        Whisper.second_name = result.second_name;
-      } else {
-        $('#second').val('');
-        $('#second').attr('placeholder', 'Enter hotkey letters');
-      }
-    } else { 
-      $('#second_checkbox').prop('checked', false); 
-      $('#second_link').html('no one (click to assign)');
-      $('#second').attr('placeholder', 'Enter hotkey letters');
-    }
-    
-
-    // Get third_checkbox
-    if (result.third_checkbox === true) { 
-      $('#third_checkbox').prop('checked', true); 
-      // Get third value
-      if (result.third) {
-        // Loop through result per keycode, convert to character
-        var characters = "";
-        for (var x in result.third) {
-          var letter = String.fromCharCode(x);
-          characters += letter;
-        }
-        characters.split('').join(' '); // [FIX] buggy, no effect
-        $('#third').attr('value', characters); 
-        $('#third_link').html(result.third_name+' (click to change)');
-        Whisper.third_jid = result.third_jid;
-        Whisper.third_name = result.third_name;
-      } else {
-        $('#third').val('');
-        $('#third').attr('placeholder', 'Enter hotkey letters');
-      }
-    } else { 
-      $('#third_checkbox').prop('checked', false); 
-      $('#third_link').html('no one (click to assign)');
-      $('#third').attr('placeholder', 'Enter hotkey letters');
-    }
-    
-
-    // Get fourth_checkbox
-    if (result.fourth_checkbox === true) { 
-      $('#fourth_checkbox').prop('checked', true); 
-      // Get fourth value
-      if (result.fourth) {
-        // Loop through result per keycode, convert to character
-        var characters = "";
-        for (var x in result.fourth) {
-          var letter = String.fromCharCode(x);
-          characters += letter;
-        }
-        characters.split('').join(' '); // [FIX] buggy, no effect
-        $('#fourth').attr('value', characters); 
-        $('#fourth_link').html(result.fourth_name+' (click to change)');
-        Whisper.fourth_jid = result.fourth_jid;
-        Whisper.fourth_name = result.fourth_name;
-      } else {
-        $('#fourth').val('');
-        $('#fourth').attr('placeholder', 'Enter hotkey letters');
-      }
-    } else { 
-      $('#fourth_checkbox').prop('checked', false); 
-      $('#fourth_link').html('no one (click to assign)');
-      $('#fourth').attr('placeholder', 'Enter hotkey letters');
-    }
-    
-
-    // Get fifth_checkbox
-    if (result.fifth_checkbox === true) { 
-      $('#fifth_checkbox').prop('checked', true); 
-      // Get fifth value
-      if (result.fifth) {
-        // Loop through result per keycode, convert to character
-        var characters = "";
-        for (var x in result.fifth) {
-          var letter = String.fromCharCode(x);
-          characters += letter;
-        }
-        characters.split('').join(' '); // [FIX] buggy, no effect
-        $('#fifth').attr('value', characters); 
-        $('#fifth_link').html(result.fifth_name+' (click to change)');
-        Whisper.fifth_jid = result.fifth_jid;
-        Whisper.fifth_name = result.fifth_name;
-      } else {
-        $('#fifth').val('');
-        $('#fifth').attr('placeholder', 'Enter hotkey letters');
-      }
-    } else { 
-      $('#fifth_checkbox').prop('checked', false); 
-      $('#fifth_link').html('no one (click to assign)');
-      $('#fifth').attr('placeholder', 'Enter hotkey letters');
-    }
-    
-
-    // Get timeout_checkbox
-    if (result.timeout_checkbox === true) { $('#timeout_checkbox').prop('checked', true); } else { $('#timeout_checkbox').prop('checked', false); }
-    // Get timeout value
-    if (result.timeout) { 
-      $('#timeout').val(result.timeout); 
-    } else { 
-      $('#timeout').val(1800000); 
-    }
-
-    // Get fadeout_checkbox
-    if (result.fadeout_checkbox === true) { $('#fadeout_checkbox').prop('checked', true); } else { $('#fadeout_checkbox').prop('checked', false); }
-    // Get fadeout value
-    if (result.fadeout) { $('#fadeout').val(result.fadeout); } else { $('#fadeout').val(5000); }   
   });
 
-  // GET RID OF DIALOG, CHANGE TO NORMAL INPUT / SEND INFO
-  $('#login_submit').click(function() {
-    $(document).trigger('connect', {
-      jid: $('#username').val().toLowerCase(),
-      password: $('#password').val()
-    });
-    $('#username').val('');
-    $('#password').val('');
-  });
-
-  $('#disconnect').click(function () {
-    console.log('Disconnect button clicked.');
-    Whisper.connection.disconnect();
-    Whisper.connection = null;
-  });
-
-  ////////////////////////////////////////////////////////////////
-  // CHANGE COOKIES TO chrome.storage (4/15/14)!!!!!!!!!!!!!!!!!!!
-  // Manually get JID/SID/RID from chrome.storage here ///////////
-  // [UPGRADE] Whisper.get_storage(); // Taking this out??? (4/16/14) // Make it work (4/24/14)
+  // CHROME.STORAGE GET JID/SID/RID \\
   chrome.storage.sync.get([
     'jid',
     'sid',
@@ -219,7 +63,24 @@ $(document).ready(function() {
     }
   });
 
-  // FRIEND_LINK CLICKS 
+  // LOGIN CLICK LISTENER \\
+  $('#login_submit').click(function() {
+    $(document).trigger('connect', {
+      jid: $('#username').val().toLowerCase(),
+      password: $('#password').val()
+    });
+    $('#username').val('');
+    $('#password').val('');
+  });
+
+  // DISCONNECT CLICK LISTENER \\
+  $('#disconnect').click(function () {
+    console.log('Disconnect button clicked.');
+    Whisper.connection.disconnect();
+    Whisper.connection = null;
+  });
+
+  // FRIEND_LINK CLICKS LISTENER \\
   $('.friend_link').click(function() {
     console.log('.friend_link click detected.');
 
@@ -246,7 +107,7 @@ $(document).ready(function() {
       $(document).trigger('roster', function() {
         console.log('Roster event triggered.');
       });  
-    } else {
+    } else { // Else show the 'Login first!' message alert
       $('#roster-alert').show(function() {
         setTimeout(function() {
           $('#roster-alert').fadeOut('slow');
@@ -256,8 +117,8 @@ $(document).ready(function() {
     
   });
 
-  // SAVE EVENT \\
-  $('#save').on('click', function() {
+  // OPTIONS SAVE CLICK LISTENER \\
+  $('#save').click(function() {
     console.log('"Save" clicked.');
     
     Whisper.on_save_onoff('onoff_checkbox', 'onoff');
@@ -273,6 +134,8 @@ $(document).ready(function() {
 
 });
 
+/* ======================= CUSTOM EVENT BINDS ====================== */
+
 // CONNECT EVENT \\
 $(document).bind('connect', function (ev, data) {
   Whisper.connection = new Strophe.Connection(
@@ -283,7 +146,6 @@ $(document).bind('connect', function (ev, data) {
 
 // CONNECTED EVENT \\
 $(document).bind('connected', function () {
-  $('#login-status').html('[Connected!]');
   console.log('Connected.');
   console.log(Whisper.connection);
 
@@ -291,18 +153,7 @@ $(document).bind('connected', function () {
   
   Whisper.connection.sendIQ(iq, Whisper.on_roster);
   Whisper.connection.addHandler(Whisper.on_roster_changed, "jabber:iq:roster", "iq", "set");
-  //Whisper.connection.addHandler(Whisper.on_message, null, "message", "chat");
 
-  // Manually save JID_master and PASS to chrome.storage here \\
-/* [DELETE] ************ chrome.storage => background page *************** (5/9/14)
-  chrome.storage.sync.set({
-    jid_master: Whisper.connection.authzid,
-    pass_master: Whisper.connection.pass
-  }, function() {
-    console.log('JID/PASS saved to chrome.storage');
-    //console.log('Whisper.storage JID: '+Whisper.storage.jid_master+' and PASS: '+Whisper.storage.pass_master);
-  });
-*/
   // [ADDED] background page (5/9/14)
   var bg = chrome.extension.getBackgroundPage();
   bg.saveInfo(Whisper.connection.authzid, Whisper.connection.pass);
@@ -313,28 +164,22 @@ $(document).bind('attach', function (ev, data) {
   Whisper.connection = new Strophe.Connection(
    'http://ec2-54-186-151-244.us-west-2.compute.amazonaws.com:5280/http-bind');
 
-  //data.rid = parseInt(data.rid,10)+1;
   Whisper.connection.attach(data.jid, data.sid, data.rid, Whisper.on_connect);
 });
 
-////////////////////////////////////////////////////////////////
-// CHANGE COOKIES TO chrome.storage!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // DISCONNECTED EVENT \\
 $(document).bind('disconnected', function () {
-  // Manually (or maybe I can keep this one in the Whisper object?)
   Whisper.del_storage();
-  
   Whisper.connection = null;
   Whisper.pending_subscriber = null;
   Whisper.on_connect;
 
   $('#roster-area ul').empty();
-  $('#chat-area ul').empty();
-  $('#chat-area div').remove();
+  // [DELETE] $('#chat-area ul').empty();
+  // [DELETE] $('#chat-area div').remove();
 });
-////////////////////////////////////////////////////////////////
 
-// ROSTER LOADED EVENT
+// ROSTER LOADED EVENT \\
 $(document).bind('roster', function() {
   $('.roster-contact').on('click', function() {
     console.log('.roster-contact click detected.');
@@ -379,14 +224,11 @@ $(document).bind('roster', function() {
   });
 });
 
-////////////////////////////////////////////////////////////////
-// CHANGE COOKIES TO chrome.storage!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// UNLOAD EVENT (Leaving page) \\
+// UNLOAD EVENT (Leaving page / for session info save) \\
 $(window).bind('unload', function () {
   console.log('Unload triggered.');
   if (Whisper.connection !== null) {
-    // Manually save JID/SID/RID to chrome.storage here \\
-    //Whisper.set_storage();
+    // Manually save JID/SID/RID to chrome.storage here
     chrome.storage.sync.set({
       jid: Whisper.connection.jid,
       sid: Whisper.connection._proto.sid,
@@ -396,8 +238,7 @@ $(window).bind('unload', function () {
       //console.log('Whisper.storage JID: '+Whisper.storage.jid+' and SID: '+Whisper.storage.sid+' and RID: '+Whisper.storage.rid);
     });
   } else {
-    // Manually delete JID/SID/RID to chrome.storage here (or maybe I can keep this one in the Whisper object?)\\
+    // Delete JID/SID/RID from chrome.storage
     Whisper.del_storage();
   }
 });
-////////////////////////////////////////////////////////////////

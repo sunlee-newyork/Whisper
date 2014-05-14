@@ -1,349 +1,48 @@
-// INJECT CHAT DIV
-// DIV version (instead of iframe) WORKING BEST (4/2/14)
-// [DELETE] var messageDiv = document.createElement("div");
-// [DELETE] messageDiv.id = "whisper_incoming";
-// [DELETE] document.body.appendChild(messageDiv);
-// [DELETE?] var incomingDiv = "<div id='whisper_incoming'></div>"; (5/6/14)
-// [DELETE?] $('body').append(incomingDiv); (5/6/14)
-
-
 // INJECT OUTGOING CHAT BOX DIV
-// [DELETE] var outgoingDiv = document.createElement("div");
-// [DELETE] outgoingDiv.id = "whisper_outgoing";
-// [DELETE] document.body.appendChild(outgoingDiv);
 var outgoingDiv = "<div id='whisper_outgoing'></div>";
 $('body').append(outgoingDiv);
 
-// [DELETE] var inputBox = document.createElement("input");
-// [DELETE] inputBox.id = "outgoing";
-// [DELETE] document.getElementById('whisper_outgoing').appendChild(inputBox);
 var inputBox = "<input id='outgoing' />";
 $('#whisper_outgoing').append(inputBox);
 
 
-// [DELETE] INJECT ROSTER (test) \\
-// var rosterArea = document.createElement("div");
-
-//=== AS OF 4/15/14, CHROME.STORAGE WORKING VERSION ===\\
-// [FIX] For some reason, Whisper object from content script isn't accessible to message.js \\
-
-var Whisper = {
-
-  /* -----------------------
-  ------ OPTIONS PAGE ------
-  ----------------------- */
-  connection: null,
-
-  jid_to_id: function (jid) {
-    return Strophe.getBareJidFromJid(jid)
-      .replace(/@/g, "-")
-      .replace(/\./g, "-");
-  },
-
-  on_connect: function (status) {
-    if (status === Strophe.Status.CONNECTING) {
-      $('#login-status').html('[Connecting...]'); // [REVISIT] turn this into a small login status bar that user can see in window (5/6/14)
-      console.log('Connecting initiated...');
-    } else if (status === Strophe.Status.CONNFAIL) {
-      $('#login-status').html('[Connection failed]'); // [REVISIT] turn this into a small login status bar that user can see in window (5/6/14)
-      console.log('Connection failed.');
-    } else if (status === Strophe.Status.AUTHENTICATING) {
-      $('#login-status').html('[Authenticating...]'); // [REVISIT] turn this into a small login status bar that user can see in window (5/6/14)
-      console.log('Authenticating initiated...');
-    } else if (status === Strophe.Status.AUTHFAIL) {
-      $('#login-status').html('[Authentication failed]'); // [REVISIT] turn this into a small login status bar that user can see in window (5/6/14)
-      console.log('Authentication failed.');
-    } else if (status === Strophe.Status.CONNECTED) {
-      $(document).trigger('connected');
-    } else if (status === Strophe.Status.DISCONNECTING) {
-      $('#login-status').html('[Disconnecting...]'); // [REVISIT] turn this into a small login status bar that user can see in window (5/6/14)
-      console.log('Disconnecting initiated...');
-    } else if (status === Strophe.Status.DISCONNECTED) {
-      // [DELETE?] $(document).trigger('disconnected'); (5/6/14)
-      // [ADDED] When disconnected, reattach instead (5/6/14)
-      $('#login-status').html('[Disconnected]'); // [REVISIT] turn this into a small login status bar that user can see in window (5/6/14)
-      $('#attach-status').html('[No]'); // [REVISIT] turn this into a small login status bar that user can see in window (5/6/14)
-      console.log('Disconnected.');
-      if (Whisper.storage.jid && Whisper.storage.sid && Whisper.storage.rid) {
-        $(document).trigger('attach', Whisper.storage);  
-      }
-    } else if (status === Strophe.Status.ATTACHED) {
-      $('#attach-status').html('[Yes!]'); // [REVISIT] turn this into a small login status bar that user can see in window (5/6/14)
-      $('#login-status').html('[Session]'); // [REVISIT] turn this into a small login status bar that user can see in window (5/6/14)
-      console.log('Session attached.');
-    }
-  },
-
-  on_message: function (message) {
-    // [DELETE] $("#whisper_incoming").fadeIn('fast'); (5/6/14)
-    console.log('Message triggered.');
-    var full_jid = $(message).attr('from');
-    console.log(full_jid);
-    var jid = Strophe.getBareJidFromJid(full_jid);
-    console.log(jid);
-    var jid_id = Whisper.jid_to_id(jid);
-    console.log(jid_id);
-
-    // IF CHAT BOX FOR SPECIFIED JID DOESN'T EXIST YET, MAKE ONE
-    if ($('#chat-'+jid_id).length === 0) {
-      // add person div to master chat div
-      var personDiv = '<div id="chat-'+jid_id+'" class="chat-div"></div>';
-      $('#chat-'+jid_id).css({ "position": "absolute", "bottom": "0", "left": "0" });
-      console.log('Person div: '+personDiv);
-
-      $('body').append(personDiv);
-      // [DELETE?] $('#whisper_incoming').append(personDiv); (5/6/14)
-      // [DELETE?] $('#chat-'+jid_id).fadeIn('fast'); (5/6/14)
-
-      console.log('#chat-jid_id triggered.');
-    }
-
-    // give full_jid data to person div
-    $('#chat-'+jid_id).data('jid', full_jid);
-    console.log('jid data attached to #chat-jid_id');
-    console.log($('#chat-'+jid_id).data('jid'));
-
-    // ADD "TYPING..." FUNCTIONALITY
-    var composing = $(message).find('composing');
-    // if composing exists...
-    if (composing.length > 0) {
-      console.log('Composing triggered.');
-      // add the "is typing..." div
-      $('#chat-'+jid_id).append(
-        '<div class="chat-event whisper-text">' +
-        Strophe.getNodeFromJid(jid) + //This is where the first/last name will go
-        ' is typing...</div>'
-      );
-      $('#chat-'+jid_id).fadeIn('fast');
-      // make person div scrollable
-      Whisper.scroll_chat(jid_id);
-    }
-
-    // FIND THE MESSAGE TEXT AND ADD TO MESSAGE DIV
-    var body = $(message).find("html > body");
-
-    // IF there is no body
-    if (body.length === 0) {
-      console.log('Body not found.');
-      body = $(message).find('body');
-      if (body.length > 0) {
-        // get message text
-        body = body.text();
-        console.log('First Body: '+body);
-      } else { // otherwise there is no message, set body to null
-        body = null;
-      }
-    } else {
-      body = body.contents();
-      console.log('Second Body: '+body);
-
-      // MAKE SPAN OUT OF MESSAGE TEXT
-      var span = $("<span></span>");
-      body.each(function() {
-        if (document.importNode) {
-          $(document.importNode(this, true)).appendTo(span);
-        } else {
-          // IE workaround
-          span.append(this.xml);
-        }
-      });
-      body = span;
-      console.log('Third Body: '+body);
-    }
-
-    // IF MESSAGE EXISTS
-    if (body) {
-      console.log('Body exists.');
-      // remove notifications since user is now active
-      $('#chat-'+jid_id+' .chat-event').remove();
-      console.log('.chat-event removed.');
-
-      // add the new message wrappers
-      $('#chat-'+jid_id).append(
-        '<div class="chat-message whisper-text">' +
-        Strophe.getNodeFromJid(jid) +
-        ': <span class="chat-text"></span>' +
-        '</div>'
-      );
-      console.log('.chat-message and .chat-text appended.');
-
-      // add the actual new message text
-      $('#chat-'+jid_id+' .chat-message:last .chat-text').append(body);
-      console.log('Body appended to #chat-text.');
-      $('#chat-'+jid_id).fadeIn('fast');
-
-      Whisper.scroll_chat(jid_id);
-    }
-
-    // Incoming message fadeout detect
-    if (Whisper.fadeout !== null) {
-      var fadeout = setTimeout(function() {
-        $("#chat-"+jid_id).fadeOut('slow');
-      }, Whisper.fadeout);  
-    }
-
-    $('#chat-'+jid_id).click(function() {
-      if (fadeout) {
-        clearTimeout(fadeout);  
-      }
-/* [DELETE] (5/6/14) 
-      // Attempt at detecting if #whisper_incoming is clicked within 3 seconds
-      $(document).on('click', function(event) { 
-        if($(event.target).parents().index($('#chat-'+jid_id)) == -1) {
-          if($('#chat-'+jid_id).is(":visible")) {
-            $('#chat-'+jid_id).fadeOut('slow');
-          }
-        }
-      });
-*/
-    });
-
-    return true;
-  },
-
-  scroll_chat: function (jid_id) {
-    // ORIGINAL Whisper \\
-    var height = $('#chat-'+jid_id).scrollHeight;
-    $('#chat-'+jid_id).scrollTop(height);
-
-    // MINE VERSION 1 \\
-    // $('#chat-'+jid_id+' :last-child').focus();
-
-    // MINE VERSION 2 \\
-    // $('chat-'+jid_id).lastChild.focus();
-  },
-
-  presence_value: function (elem) {
-    if (elem.hasClass('online')) {
-      return 2;
-    } else if (elem.hasClass('away')) {
-      return 1;
-    }
-
-    return 0;
-  },
-
-  storage: {
-    jid: null,
-    sid: null,
-    rid: null
-  },
-
-  loginStorage: {
-    jid_master: null,
-    pass_master: null
-  },
-
-  del_storage: function() {
-    sessionStorage.removeItem('jid');
-    sessionStorage.removeItem('sid');
-    sessionStorage.removeItem('rid');
-
-    Whisper.storage.jid = null;
-    Whisper.storage.sid = null;
-    Whisper.storage.rid = null;
-
-    console.log('JID/SID/RID removed from sessionStorage.');
-    console.log('Whisper.storage JID: '+Whisper.storage.jid+' and SID: '+Whisper.storage.sid+' and RID: '+Whisper.storage.rid);
-  },
-
-  onoff: null,
-  first: null,
-  first_jid: null,
-  first_name: null,
-  second: null,
-  second_jid: null,
-  second_name: null,
-  third: null,
-  third_jid: null,
-  third_name: null,
-  fourth: null,
-  fourth_jid: null,
-  fourth_name: null,
-  fifth: null,
-  fifth_jid: null,
-  fifth_name: null,
-  fadeout: null,
-  timeout: null
-
-};
-
 $(document).ready(function() {
-
-  //Whisper.get_storage();
 
   // GET FROM sessionStorage JID/SID/RID
   Whisper.storage.jid = sessionStorage.getItem('jid');
   Whisper.storage.sid = sessionStorage.getItem('sid');
   Whisper.storage.rid = sessionStorage.getItem('rid');
-  // Console.log outputs
-  console.log('JID/SID/RID retrieved from sessionStorage.');
-  console.log('sessionStorage JID: '+Whisper.storage.jid+' and SID: '+Whisper.storage.sid+' and RID: '+Whisper.storage.rid);
 
   // IF JID/SID/RID are set...
   if (Whisper.storage.jid && Whisper.storage.sid && Whisper.storage.rid) {
     // Console.log outputs
     console.log('sessionStorage JID/SID/RID detected.');
-  
-/* [DELETE] I don't know why this was here to begin with... don't need JID and password for session attach (5/6/14)
+    console.log('JID/SID/RID retrieved from sessionStorage.');
+    console.log('sessionStorage JID: '+Whisper.storage.jid+' and SID: '+Whisper.storage.sid+' and RID: '+Whisper.storage.rid);
 
-    // GET FROM chrome.storage JID_Master/PASS_Master
-    chrome.storage.sync.get([
-      'jid_master',
-      'pass_master'
-    ], function (result) { 
-      // Save results to loginStorage
-      Whisper.loginStorage.jid_master = result.jid_master;
-      Whisper.loginStorage.pass_master = result.pass_master;
-      console.log('JID_Master/PASS_Master retrieved from chrome.storage.');
-      console.log('chrome.storage JID_Master: '+Whisper.loginStorage.jid_master+' and PASS_Master: '+Whisper.loginStorage.pass_master);
-      if (Whisper.loginStorage.jid_master && Whisper.loginStorage.pass_master) {
-        // Trigger attach with outputs
-        $(document).trigger('attach', Whisper.storage);
-      } else {
-        console.log('No chrome.storage detected. Action stopped.');  
-        Whisper.del_storage();
-      }
-    });
-*/
     // Trigger attach with outputs
     $(document).trigger('attach', Whisper.storage); 
-
   } else { // ELSE if JID/SID/RID are not set...
-    /* [DELETE] ************ chrome.storage => background page *************** (5/9/14)  
-    chrome.storage.sync.get([
-      'jid_master',
-      'pass_master'
-    ], function (result) { 
-      // Save results to loginStorage
-      Whisper.loginStorage.jid_master = result.jid_master;
-      Whisper.loginStorage.pass_master = result.pass_master;
-      console.log('JID_Master/PASS_Master retrieved from chrome.storage.');
-      console.log('chrome.storage JID_Master: '+Whisper.loginStorage.jid_master+' and PASS_Master: '+Whisper.loginStorage.pass_master);
-      if (Whisper.loginStorage.jid_master && Whisper.loginStorage.pass_master) {
-        // Console.log outputs
-        console.log('No sessionStorage detected. (Connecting)');
-        // Trigger connect with outputs
-        $(document).trigger('connect', Whisper.loginStorage);
-      } else {
-        console.log('No chrome.storage detected. Action stopped.');
-        Whisper.del_storage();
-      }
-    }); 
-    */
+    console.log('JID/SID/RID not found.');
+    console.log('sessionStorage JID: '+Whisper.storage.jid+' and SID: '+Whisper.storage.sid+' and RID: '+Whisper.storage.rid);
     // [ADDED] Get login info from background page (5/9/14)
     chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-      Whisper.loginStorage.jid_master = request.jid;
-      Whisper.loginStorage.pass_master = request.pass;
-      console.log('JID_Master/PASS_Master retrieved from background page.');
-      console.log('loginStorage JID_Master: '+Whisper.loginStorage.jid_master+' and PASS_Master: '+Whisper.loginStorage.pass_master);
-      if (Whisper.loginStorage.jid_master && Whisper.loginStorage.pass_master) {
-        // Console.log outputs
-        console.log('No sessionStorage detected. (Connecting)');
-        // Trigger connect with outputs
-        $(document).trigger('connect', Whisper.loginStorage);
+      if (request) {
+        console.log(request);
+        Whisper.loginStorage.jid_master = request.jid;
+        Whisper.loginStorage.pass_master = request.pass;
+        console.log('JID_Master/PASS_Master retrieved from background page.');
+        console.log('Whisper.loginStorage JID_Master: '+Whisper.loginStorage.jid_master+' and PASS_Master: '+Whisper.loginStorage.pass_master);
+        if (Whisper.loginStorage.jid_master && Whisper.loginStorage.pass_master) {
+          // Console.log outputs
+          console.log('No sessionStorage detected. (Connecting)');
+          // Trigger connect with outputs
+          $(document).trigger('connect', Whisper.loginStorage);
+        } else {
+          console.log('No background page login info detected. Action stopped.');
+        }
       } else {
-        console.log('No background page login info detected. Action stopped.');
+        console.log('No background page request detected. Action stopped.');
       }
     }); 
   }
@@ -351,95 +50,27 @@ $(document).ready(function() {
   // STORE ALL CHROME.STORAGE TO Whisper
   chrome.storage.sync.get(function (result) {
     console.log('chrome.storage triggered.');
-    // Onoff save
-    if (result.onoff_checkbox === true) {
-      console.log('Onoff_checkbox detected: '+result.onoff_checkbox);
-      if (result.onoff) {
-        console.log('Onoff detected:');
-        console.log(result.onoff);
-        Whisper.onoff = result.onoff;
-        console.log('Whisper.onoff:');
-        console.log(Whisper.onoff);
+    console.log(result);
+
+    // [EDITED] DRYless version of chrome.storage retrieval (5/13/14)
+    var array = ['onoff', 'first', 'second', 'third', 'fourth', 'fifth', 'timeout', 'fadeout']
+
+    for (var i=0; i<array.length; i++) {
+      if (result[array[i]+'_checkbox'] === true) {
+        console.log(array[i]+'_checkbox detected: '+result[array[i]+'_checkbox']);
+        if (result[array[i]]) {
+          console.log(array[i]+' detected.', result[array[i]]);
+          Whisper[array[i]] = result[array[i]];
+          console.log('Whisper.'+array[i]+': ', Whisper[array[i]]);
+          if (result[array[i]+'_jid']) {
+            Whisper[array[i]+'_jid'] = result[array[i]+'_jid'];
+            Whisper[array[i]+'_name'] = result[array[i]+'_name'];
+            console.log('Whisper '+array[i]+'_jid: '+Whisper[array[i]+'_jid']+' and '+array[i]+'_name: '+Whisper[array[i]+'_name']);
+          }
+        }
       }
     }
-    // First save
-    if (result.first_checkbox === true) {
-      console.log('First_checkbox detected: '+result.first_checkbox);
-      if (result.first) {
-        console.log('First detected:');
-        console.log(result.first);
-        Whisper.first = result.first;
-        Whisper.first_jid = result.first_jid;
-        Whisper.first_name = result.first_name;
-        console.log('Whisper first_jid: '+Whisper.first_jid+' and first_name: '+Whisper.first_name);
-      }
-    }
-    // Second save
-    if (result.second_checkbox === true) {
-      console.log('Second_checkbox detected: '+result.second_checkbox);
-      if (result.second) {
-        console.log('Second detected:');
-        console.log(result.second);
-        Whisper.second = result.second;
-        Whisper.second_jid = result.second_jid;
-        Whisper.second_name = result.second_name;
-        console.log('Whisper second_jid: '+Whisper.second_jid+' and second_name: '+Whisper.second_name);
-      }
-    }
-    // Third save
-    if (result.third_checkbox === true) {
-      console.log('Third_checkbox detected: '+result.third_checkbox);
-      if (result.third) {
-        console.log('Third detected:');
-        console.log(result.third);
-        Whisper.third = result.third;
-        Whisper.third_jid = result.third_jid;
-        Whisper.third_name = result.third_name;
-        console.log('Whisper third_jid: '+Whisper.third_jid+' and third_name: '+Whisper.third_name);
-      }
-    }
-    // Fourth save
-    if (result.fourth_checkbox === true) {
-      console.log('Fourth_checkbox detected: '+result.fourth_checkbox);
-      if (result.fourth) {
-        console.log('Fourth detected:');
-        console.log(result.fourth);
-        Whisper.fourth = result.fourth;
-        Whisper.fourth_jid = result.fourth_jid;
-        Whisper.fourth_name = result.fourth_name;
-        console.log('Whisper fourth_jid: '+Whisper.fourth_jid+' and fourth_name: '+Whisper.fourth_name);
-      }
-    }
-    // Fifth save
-    if (result.fifth_checkbox === true) {
-      console.log('Fifth_checkbox detected: '+result.fifth_checkbox);
-      if (result.fifth) {
-        console.log('Fifth detected:');
-        console.log(result.fifth);
-        Whisper.fifth = result.fifth;
-        Whisper.fifth_jid = result.fifth_jid;
-        Whisper.fifth_name = result.fifth_name;
-        console.log('Whisper fifth_jid: '+Whisper.fifth_jid+' and fifth_name: '+Whisper.fifth_name);
-      }
-    }
-    // Timeout save
-    if (result.timeout_checkbox === true) {
-      console.log('Timeout_checkbox detected: '+result.timeout_checkbox);
-      if (result.timeout > 0) {
-        console.log('Timeout detected: '+result.timeout);
-        Whisper.timeout = result.timeout;
-        console.log('Whisper.timeout: '+Whisper.timeout);
-      }
-    } // NO DEFAULT BECAUSE USER CAN OPT OUT OF IT
-    // Fadeout save
-    if (result.fadeout_checkbox === true) {
-      console.log('Fadeout_checkbox detected: '+result.fadeout_checkbox);
-      if (result.fadeout > 0) {
-        console.log('Fadeout detected: '+result.fadeout);
-        Whisper.fadeout = result.fadeout;
-        console.log('Whisper.fadeout: '+Whisper.fadeout);
-      }
-    } // NO DEFAULT BECAUSE USER CAN OPT OUT OF IT
+
   });
 
   // OUTGOING CHAT LISTENER
@@ -496,12 +127,14 @@ $(document).ready(function() {
       $(this).val('');
       // After sending, 
       $('#chat-'+jid_id).data('composing', false); // #chat-jid_id => change this later
-
+/*
     } 
       // NOT WORKINGGGGGG
       else if (ev.which === 27) { // ELSE IF 'ESC' is pressed...
       console.log('"ESC" pressed/detected.');
       $('#whisper_outgoing').fadeOut('fast');
+*/
+
     } else { // ELSE if 'enter' is not pressed yet...
       var composing = $('#chat-'+jid_id).data('composing');
       if (!composing) {
@@ -541,17 +174,6 @@ $(document).bind('connected', function () {
   Whisper.connection.addHandler(Whisper.on_roster_changed, "jabber:iq:roster", "iq", "set");
   Whisper.connection.addHandler(Whisper.on_message, null, "message", "chat");
 
-/* [DELETE] ************ chrome.storage => background page *************** (5/9/14)  
-  chrome.storage.sync.remove(['jid_master', 'pass_master'], function() {
-    Whisper.loginStorage.jid_master = null;
-    Whisper.loginStorage.pass_master = null;
-
-    chrome.storage.sync.get(['jid_master', 'pass_master'], function (result) {
-      console.log('JID_Master: '+result.jid_master+' and Pass: '+result.pass_master);
-    });
-  });
-*/
-
   // [ADDED] delete loginStorage after usage, no longer need it (5/9/14)
   Whisper.loginStorage.jid_master = null;
   Whisper.loginStorage.pass_master = null;
@@ -577,10 +199,6 @@ $(document).bind('disconnected', function () {
   Whisper.connection = null;
   Whisper.pending_subscriber = null;
   Whisper.on_connect;
-
-  $('#roster-area ul').empty();
-  $('#chat-area ul').empty();
-  $('#chat-area div').remove();
 });
 
 // UNLOAD EVENT (Leaving page) \\
@@ -769,11 +387,6 @@ $(window).keydown(function (e) {
     console.log('Whisper.fifth.triggered after keyup: '+Whisper.fifth.triggered);
   }
 });
-
-
-// MAYBE add the <send to correct person> function here??
-// Changing ^ to outside outgoingbox click listener to fade it out
-// ^ ...what did I mean here? I don't remember anymore...
 
 // IF mouse is clicked outside #whisper_outgoing...
 $(document).on('click', function(event) {
