@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
 
-  "name": "Whisper w/BG",
+  "name": "Whisper",
 
   "description": "Message your friends in class or at work.",
 
@@ -20,8 +20,13 @@
   ],
 
   "background": {
-    "scripts": ["background.js"],
-    "persistent": false
+    "scripts": [
+      "scripts/jquery-1.11.0.min.js",
+      "scripts/strophe.js",
+      "connection.js",
+      "background.js"
+    ],
+    "persistent": true
   },
 
   "content_scripts": [
@@ -29,12 +34,6 @@
       "matches": [ "<all_urls>" ],
       "css": [
         "message.css"
-      ],
-      "js": [
-        "scripts/jquery-1.11.0.min.js",
-        "scripts/strophe.js",
-        "whisper.js",
-        "message.js"
       ],
       "run_at": "document_end",
       "all_frames": false
