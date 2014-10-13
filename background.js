@@ -1,5 +1,10 @@
 // ********* [EDITED] Making major shift from using chrome.storage for JID/PASS_MASTER to background pages (5/9/14) **********
 
+
+/* ======================================================================
+=                        BROWSER ICON LISTENER                          =
+====================================================================== */
+
 // [INITIAL] Options page icon on top right corner
 function openOrFocusOptionsPage() {
 
@@ -25,6 +30,11 @@ function openOrFocusOptionsPage() {
 chrome.browserAction.onClicked.addListener(function(tab) {
   openOrFocusOptionsPage();
 });
+
+
+/* ======================================================================
+=                           BACKGROUND OBJECT                           =
+====================================================================== */
 
 // [ADDED] Options page connection event listener (5/9/14)
 var BG = {

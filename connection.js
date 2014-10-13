@@ -1,23 +1,19 @@
 //=== AS OF 4/15/14, CHROME.STORAGE WORKING VERSION ===\\
+// Check if this file is loaded [10/12/14]
 console.log('Whisper');
 
-var Whisper = {
+var Connector = {
 
-  /* -----------------------
-  ------ OPTIONS PAGE ------
-  ----------------------- */
-/*
   connection: null,
+  currentStatus: Number,
 
-  jid_to_id: function (jid) {
+  convertJidToId: function (jid) {
     return Strophe.getBareJidFromJid(jid)
       .replace(/@/g, "-")
       .replace(/\./g, "-");
   },
 
-  currentStatus: Number,
-
-  on_connect: function (status) {
+  onConnect: function (status) {
     if (status === Strophe.Status.CONNECTING) {
       Whisper.currentStatus = 1;
       $('#login-status').html('Connecting...').css('color', 'rgb(50,200,50)');
@@ -56,20 +52,20 @@ var Whisper = {
       $('#login-status').html('Session').css('color', 'rgb(0,150,0)');
       $('#user_login').html(Strophe.getNodeFromJid(Whisper.connection.jid));
       var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});
-      Whisper.connection.sendIQ(iq, Whisper.on_roster);
-      Whisper.connection.addHandler(Whisper.on_roster_changed, "jabber:iq:roster", "iq", "set");
+      Whisper.connection.sendIQ(iq, Whisper.onRoster);
+      Whisper.connection.addHandler(Whisper.onRosterChanged, "jabber:iq:roster", "iq", "set");
       console.log('Session attached.');
     }
   },
 
   // CHANGE THIS, THIS IS THE FRIENDS LIST (FOR KEYBOARD SHORTCUTS)
-  on_roster: function (iq) {
+  onRoster: function (iq) {
     $(iq).find('item').each(function () {
       var jid = $(this).attr('jid');
       var name = $(this).attr('name') || jid;
 
       // transform jid into an id
-      var jid_id = Whisper.jid_to_id(jid);
+      var jid_id = Whisper.convertJidToId(jid);
 
       var contact = $("<li id='" + jid_id + "'>" +
                     "<div class='roster-contact offline'>" +
@@ -79,24 +75,24 @@ var Whisper = {
                     jid +
                     "</div></div></li>");
 
-      Whisper.insert_contact(contact);
+      Whisper.insertContact(contact);
     });
 
     // set up presence handler and send initial presence
-    Whisper.connection.addHandler(Whisper.on_presence, null, "presence");
+    Whisper.connection.addHandler(Whisper.onPresence, null, "presence");
     Whisper.connection.send($pres());
   },
 
-  insert_contact: function (elem) {
+  insertContact: function (elem) {
     var jid = elem.find('.roster-jid').text();
-    var pres = Whisper.presence_value(elem.find('.roster-contact'));
+    var pres = Whisper.presenceValue(elem.find('.roster-contact'));
     
     var contacts = $('#roster-area li');
 
     if (contacts.length > 0) {
       var inserted = false;
       contacts.each(function () {
-        var cmp_pres = Whisper.presence_value(
+        var cmp_pres = Whisper.presenceValue(
           $(this).find('.roster-contact'));
         var cmp_jid = $(this).find('.roster-jid').text();
 
@@ -121,16 +117,16 @@ var Whisper = {
     }
   },
 
-  pending_subscriber: null,
+  pendingSubscriber: null,
 
-  on_presence: function (presence) {
+  onPresence: function (presence) {
     var ptype = $(presence).attr('type');
     var from = $(presence).attr('from');
-    var jid_id = Whisper.jid_to_id(from);
+    var jid_id = Whisper.convertJidToId(from);
 
     if (ptype === 'subscribe') {
-      // populate pending_subscriber, the approve-jid span, and open the dialog
-      Whisper.pending_subscriber = from;
+      // populate pendingSubscriber, the approve-jid span, and open the dialog
+      Whisper.pendingSubscriber = from;
       $('#approve-jid').text(Strophe.getBareJidFromJid(from));
       $('#approve_dialog').dialog('open');
     } else if (ptype !== 'error') {
@@ -151,22 +147,22 @@ var Whisper = {
 
       var li = contact.parent();
       li.remove();
-      Whisper.insert_contact(li);
+      Whisper.insertContact(li);
     }
 
     // reset addressing for user since their presence changed
-    var jid_id = Whisper.jid_to_id(from);
+    var jid_id = Whisper.convertJidToId(from);
     $('#chat-' + jid_id).data('jid', Strophe.getBareJidFromJid(from));
 
     return true;
   },
 
-  on_roster_changed: function (iq) {
+  onRosterChanged: function (iq) {
     $(iq).find('item').each(function () {
       var sub = $(this).attr('subscription');
       var jid = $(this).attr('jid');
       var name = $(this).attr('name') || jid;
-      var jid_id = Whisper.jid_to_id(jid);
+      var jid_id = Whisper.convertJidToId(jid);
 
       if (sub === 'remove') {
         // contact is being removed
@@ -186,17 +182,15 @@ var Whisper = {
         if ($('#' + jid_id).length > 0) {
           $('#' + jid_id).replaceWith(contact_html);
         } else {
-          Whisper.insert_contact($(contact_html));
+          Whisper.insertContact($(contact_html));
         }
       }
     });
 
     return true;
   },
-*/
 
-/* [DELETE] Don't care about presence value, just need full roster list (5/15/14)
-  presence_value: function (elem) {
+  presenceValue: function (elem) {
     if (elem.hasClass('online')) {
       return 2;
     } else if (elem.hasClass('away')) {
@@ -205,7 +199,6 @@ var Whisper = {
 
     return 0;
   },
-*/ 
 
 /* [DELETE] Don't need this, this is for session attachment (5/15/14)
   storage: {
@@ -215,7 +208,7 @@ var Whisper = {
   },
 
 
-  del_storage: function() {
+  deleteStorage: function() {
     chrome.storage.sync.remove([
       'jid', 
       'sid', 
@@ -230,193 +223,15 @@ var Whisper = {
   },
 */
 
-/* [NOTE] =========== ALL OF THESE ARE FOR SETTING.JS SPECIFICALLY, WILL ADD TO IT AS A 'SETTINGS' OBJECT ============= (5/15/14)
-
-  which_friend: null,
-
-  first_jid: null,
-  first_name: null,
-
-  second_jid: null,
-  second_name: null,
-
-  third_jid: null,
-  third_name: null,
-
-  fourth_jid: null,
-  fourth_name: null,
-
-  fifth_jid: null,
-  fifth_name: null,
-
-  charKeycode: { 'a':65,'b':66,'c':67,'d':68,'e':69,'f':70,'g':71,'h':72,'i':73,'j':74,'k':75,'l':76,'m':77,'n':78,'o':79,'p':80,'q':81,'r':82,'s':83,'t':84,'u':85,'v':86,'w':87,'x':88,'y':89,'z':90 },
-
-  on_save_onoff: function(checkbox, value) {
-    var options = {};
-
-    if ($('#'+checkbox).is(':checked')) {
-      console.log(checkbox+' detected. Chrome.storage triggered.');
-
-      options[checkbox] = true;
-
-      // Get value string, separate each letter out (for loop)
-      var value_keys = $('#'+value).val().toLowerCase();
-      console.log('value_keys: '+value_keys);
-      console.log('Typeof value_keys: '+typeof value_keys);
-
-      var keyBank = {};
-      // For each letter...
-      for (var i=0; i < value_keys.length; i++) {       
-        var key = value_keys.charAt(i);
-        console.log('charAt('+i+'): '+key);
-
-        // Convert to keycode
-        var keycode = Whisper.charKeycode[key];
-        console.log(keycode);
-
-        // Push keycode to keycode bank
-        
-        keyBank[keycode] = 'false';
-      }
-
-      console.log('keyBank: ');
-      console.log(keyBank);
-      
-      options[value] = keyBank;
-
-      console.log('options:');
-      console.log(options);
-
-      chrome.storage.sync.set(options);
-      
-      // Save value
-      console.log(value+': '+value_keys);
-    } else {
-      console.log(checkbox+' not detected.');
-
-      options[checkbox] = false;
-      options[value] = null;
-      console.log('options:');
-      console.log(options);
-
-      chrome.storage.sync.set(options);
-    }
-  },
-
-  on_save_friends: function(checkbox, value, friend_jid, friend_name) {
-    var options = {};
-
-    if ($('#'+checkbox).is(':checked')) {
-      console.log(checkbox+' detected. Chrome.storage triggered.');
-
-      options[checkbox] = true;
-
-      // Get value string, separate each letter out (for loop)
-      var value_keys = $('#'+value).val().toLowerCase();
-      console.log('value_keys: '+value_keys);
-      console.log('Typeof value_keys: '+typeof value_keys);
-
-      var keyBank = {};
-      // For each letter...
-      for (var i=0; i < value_keys.length; i++) {       
-        var key = value_keys.charAt(i);
-        console.log('charAt('+i+'): '+key);
-
-        // Convert to keycode
-        var keycode = Whisper.charKeycode[key];
-        console.log(keycode);
-
-        // Push keycode to keycode bank
-        
-        keyBank[keycode] = 'false';
-      }
-
-      console.log('keyBank: ');
-      console.log(keyBank);
-      
-      options[value] = keyBank;
-      
-      // Get JID and NAME from roster choice
-      options[friend_jid] = Whisper[friend_jid];
-      options[friend_name] = Whisper[friend_name];
-
-      console.log('options:');
-      console.log(options);
-
-      chrome.storage.sync.set(options);
-      
-      // Save value
-      console.log(value+': '+value_keys);
-    } else {
-      console.log(checkbox+' not detected.');
-
-      options[checkbox] = false;
-      options[value] = null;
-
-      Whisper[friend_jid] = null;
-      Whisper[friend_name] = null;
-
-      options[friend_jid] = Whisper[friend_jid];
-      options[friend_name] = Whisper[friend_name];
-
-// BUGGY => FIX LATER
-//      if (value !== 'onoff') {
-//        options[friend_jid] = null;
-//        options[friend_name] = null;
-//      }
-
-      chrome.storage.sync.set(options);
-    }
-  },
-
-  on_save_regular: function(checkbox, value) {
-    var options = {};
-
-    if ($('#'+checkbox).is(':checked')) {
-      console.log(checkbox+' detected. Chrome.storage triggered.');
-
-      options[checkbox] = true;
-
-      // Get value string, separate each letter out (for loop)
-      var value_num = $('#'+value).val();
-      console.log('value_num: '+value_num);
-      console.log('Typeof value_num: '+typeof value_num);
-      
-      options[value] = value_num;
-
-
-      console.log('options:');
-      console.log(options);
-
-      chrome.storage.sync.set(options);
-
-    } else {
-      console.log(checkbox+' not detected.');
-
-      options[checkbox] = false;
-      options[value] = null;
-
-      chrome.storage.sync.set(options);
-    }
-  },
-
-  on_saved: function() {
-    $('#save_message').show();
-    setTimeout(function() {
-      $('#save_message').fadeOut('slow');
-    }, 1000);  
-  },
-*/
-
   // ==================== MESSAGE.JS PROPERTIES ==================== 
-  on_message: function (message) {
+  onMessage: function (message) {
     // [DELETE] $("#whisper_incoming").fadeIn('fast'); (5/6/14)
     console.log('Message triggered: ', message);
     var full_jid = $(message).attr('from');
     console.log(full_jid);
     var jid = Strophe.getBareJidFromJid(full_jid);
     console.log(jid);
-    var jid_id = Whisper.jid_to_id(jid);
+    var jid_id = Whisper.convertJidToId(jid);
     console.log(jid_id);
 
     // IF CHAT BOX FOR SPECIFIED JID DOESN'T EXIST YET, MAKE ONE
@@ -451,7 +266,7 @@ var Whisper = {
       );
       $('#chat-'+jid_id).fadeIn('fast');
       // make person div scrollable
-      Whisper.scroll_chat(jid_id);
+      Whisper.scrollChat(jid_id);
     }
 
     // FIND THE MESSAGE TEXT AND ADD TO MESSAGE DIV
@@ -507,7 +322,7 @@ var Whisper = {
       console.log('Body appended to #chat-text.');
       $('#chat-'+jid_id).fadeIn('fast');
 
-      Whisper.scroll_chat(jid_id);
+      Whisper.scrollChat(jid_id);
     }
 
     // Incoming message fadeout detect
@@ -526,7 +341,7 @@ var Whisper = {
     return true;
   },
 
-  scroll_chat: function (jid_id) {
+  scrollChat: function (jid_id) {
     // ORIGINAL Whisper \\
     var height = $('#chat-'+jid_id).scrollHeight;
     $('#chat-'+jid_id).scrollTop(height);
@@ -549,7 +364,7 @@ var Whisper = {
     pass_master: null
   },
 
-  del_storage: function() {
+  deleteStorage: function() {
     sessionStorage.removeItem('jid');
     sessionStorage.removeItem('sid');
     sessionStorage.removeItem('rid');

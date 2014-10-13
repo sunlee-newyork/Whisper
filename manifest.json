@@ -1,5 +1,5 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
 
   "name": "Whisper",
 
@@ -34,6 +34,9 @@
       "matches": [ "<all_urls>" ],
       "css": [
         "message.css"
+      ],
+      "js": [
+        "scripts/jquery-1.11.0.min.js"
       ],
       "run_at": "document_end",
       "all_frames": false

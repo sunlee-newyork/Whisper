@@ -2,6 +2,10 @@
 // As of 4/16/14: Getting rid of JID/RID/SID chrome.storage save, instead saving JID/PASS to chrome.storage
 // As of 5/15/15: Creating setting.js's very own Object. Only options saving occurs on this page, no Strophe connections
 
+/* ======================================================================
+=                           SETTINGS OBJECT                             =
+====================================================================== */
+
 var Settings = {
 
   status: null,
@@ -25,205 +29,195 @@ var Settings = {
 
   charKeycode: { 'a':65,'b':66,'c':67,'d':68,'e':69,'f':70,'g':71,'h':72,'i':73,'j':74,'k':75,'l':76,'m':77,'n':78,'o':79,'p':80,'q':81,'r':82,'s':83,'t':84,'u':85,'v':86,'w':87,'x':88,'y':89,'z':90 },
 
-  on_save_onoff: function(checkbox, value) {
-    var options = {};
+  convertRawKeys: function (keysRawValue) {
+    var keyBank = {};
 
-    if ($('#'+checkbox).is(':checked')) {
-      console.log(checkbox+' detected. Chrome.storage triggered.');
+    for (var i=0; i < keysRawValue.length; i++) {
+      var key = keysRawValue.charAt(i);
+      console.log('charAt('+i+'): '+key);
 
-      options[checkbox] = true;
+      // Convert to keycode
+      var keycode = this.charKeycode[key];
+      console.log('Keycode = '+keycode);
 
-      // Get value string, separate each letter out (for loop)
-      var value_keys = $('#'+value).val().toLowerCase();
-      console.log('value_keys: '+value_keys);
-      console.log('Typeof value_keys: '+typeof value_keys);
-
-      var keyBank = {};
-      // For each letter...
-      for (var i=0; i < value_keys.length; i++) {       
-        var key = value_keys.charAt(i);
-        console.log('charAt('+i+'): '+key);
-
-        // Convert to keycode
-        var keycode = Settings.charKeycode[key];
-        console.log(keycode);
-
-        // Push keycode to keycode bank
-        
-        keyBank[keycode] = 'false';
-      }
-
-      console.log('keyBank: ');
-      console.log(keyBank);
-      
-      options[value] = keyBank;
-
-      console.log('options:');
-      console.log(options);
-
-      chrome.storage.sync.set(options);
-      
-      // Save value
-      console.log(value+': '+value_keys);
-    } else {
-      console.log(checkbox+' not detected.');
-
-      options[checkbox] = false;
-      options[value] = null;
-      console.log('options:');
-      console.log(options);
-
-      chrome.storage.sync.set(options);
+      // Push keycode to bank, and set initially to false
+      keyBank[keycode] = 'false';
     }
+
+    console.log('keyBank: ', keyBank);
+
+    return keyBank;
   },
 
-  on_save_friends: function(checkbox, value, friend_jid, friend_name) {
-    var options = {};
+  saveOption: function (checkbox, value, friendJid, friendName) {
+    // Settings need to be passed as an object to chrome.storage, so create placeholder
+    var optionsPlaceholder = {};
 
+    // If the option is checked in the settings page...
     if ($('#'+checkbox).is(':checked')) {
+
       console.log(checkbox+' detected. Chrome.storage triggered.');
 
-      options[checkbox] = true;
+      // Create namespaced object
+      optionsPlaceholder[checkbox] = {};
 
-      // Get value string, separate each letter out (for loop)
-      var value_keys = $('#'+value).val().toLowerCase();
-      console.log('value_keys: '+value_keys);
-      console.log('Typeof value_keys: '+typeof value_keys);
+      // Set enabled to true
+      optionsPlaceholder[checkbox]['enabled'] = true;
 
-      var keyBank = {};
-      // For each letter...
-      for (var i=0; i < value_keys.length; i++) {       
-        var key = value_keys.charAt(i);
-        console.log('charAt('+i+'): '+key);
+      console.log('parseInt value = ' + parseInt(value));
 
-        // Convert to keycode
-        var keycode = Settings.charKeycode[key];
-        console.log(keycode);
+      // *** IF TIMEOUT/FADEOUT *** \\
+      if (parseInt(value) == NaN) {
 
-        // Push keycode to keycode bank
-        
-        keyBank[keycode] = 'false';
+        var timespanValue = parseInt($('#'+value).val());
+        console.log('Timespan value = ' + timespanValue);
+        console.log('Typeof timespan value: ' + typeof timespanValue);
+
+        optionsPlaceholder[checkbox]['timespan'] = timespanValue;
+
+        console.log('Options placeholder: ', optionsPlaceholder);
+
+      } 
+
+      // *** IF SHORTCUT KEYS *** \\
+      else {
+
+        // Get value string
+        var keysRawValue = $('#'+value).val().toLowerCase();
+        console.log('keysRawValue: '+keysRawValue);
+
+        // Call key converter method, convert to keycode
+        var keyBank = this.convertRawKeys(keysRawValue);
+
+        // Save key bank to this options object
+        optionsPlaceholder[checkbox]['keyBank'] = keyBank;
+        console.log('Options placeholder: ', optionsPlaceholder);
+
+        // *** IF FRIENDS OPTION *** \\
+        if (friendJid !== undefined) {
+          optionsPlaceholder[checkbox]['friendJid'] = this[friend_jid];
+          optionsPlaceholder[checkbox]['friendName'] = this[friend_name];
+        }
+
       }
-
-      console.log('keyBank: ');
-      console.log(keyBank);
-      
-      options[value] = keyBank;
-      
-      // Get JID and NAME from roster choice
-      options[friend_jid] = Settings[friend_jid];
-      options[friend_name] = Settings[friend_name];
-
-      console.log('options:');
-      console.log(options);
-
-      chrome.storage.sync.set(options);
-      
-      // Save value
-      console.log(value+': '+value_keys);
-    } else {
-      console.log(checkbox+' not detected.');
-
-      options[checkbox] = false;
-      options[value] = null;
-
-      Settings[friend_jid] = null;
-      Settings[friend_name] = null;
-
-      options[friend_jid] = Settings[friend_jid];
-      options[friend_name] = Settings[friend_name];
-
-/* BUGGY => FIX LATER
-      if (value !== 'onoff') {
-        options[friend_jid] = null;
-        options[friend_name] = null;
-      }
-*/
-      chrome.storage.sync.set(options);
     }
+
+    // Still necessary in case user unchecks the option
+    else {
+      console.log(checkbox + ' not detected. Setting option to \'disabled\' in chrome.storage');
+
+      // Disable this option
+      optionsPlaceholder[checkbox] = false;
+    }
+
+    // Save settings to chrome.storage
+    chrome.storage.sync.set(optionsPlaceholder);
+
   },
 
-  on_save_regular: function(checkbox, value) {
-    var options = {};
-
-    if ($('#'+checkbox).is(':checked')) {
-      console.log(checkbox+' detected. Chrome.storage triggered.');
-
-      options[checkbox] = true;
-
-      // Get value string, separate each letter out (for loop)
-      var value_num = $('#'+value).val();
-      console.log('value_num: '+value_num);
-      console.log('Typeof value_num: '+typeof value_num);
-      
-      options[value] = value_num;
-
-
-      console.log('options:');
-      console.log(options);
-
-      chrome.storage.sync.set(options);
-
-    } else {
-      console.log(checkbox+' not detected.');
-
-      options[checkbox] = false;
-      options[value] = null;
-
-      chrome.storage.sync.set(options);
-    }
-  },
-
-  on_saved: function() {
+  onSaved: function() {
     $('#save_message').show();
     setTimeout(function() {
       $('#save_message').fadeOut('slow');
     }, 1000);  
-  },
+  }
 
 }
 
-
+/* ======================================================================
+=                         SETTINGS DOM READY                            =
+====================================================================== */
 
 $(document).ready(function() {
 
   // CHROME.STORAGE GET ALL SAVED PREFERENCES AND RESTORE \\
   chrome.storage.sync.get(function (result) {
+
     console.log('Chrome.storage result: ', result);
 
     // [EDITED] DRYless version of initial fill-in (5/13/14)
     var array = ['onoff', 'first', 'second', 'third', 'fourth', 'fifth', 'timeout', 'fadeout'];
 
     for (var i=0; i<array.length; i++) {
+
       console.log(array[i]);
-      if (result[array[i]+'_checkbox'] === true) {
+
+      // If option is enabled in chrome.storage...
+      if (result[array[i]+'_checkbox']) {
+
+        // Check the checkbox in the settings page
         $('#'+array[i]+'_checkbox').prop('checked', true);
-        if (typeof result[array[i]] == 'string') {
-          if (result[array[i]]) {
-            $('#'+array[i]).val(result[array[i]]);  
-          } else {
-            $('#'+array[i]).val('Select');
-          }
-        } else if (typeof result[array[i]] == 'object') {
+
+        // Set the option's value in the settings page
+        $('#'+array[i]).val(result[array[i]]);
+
+        // *** IF SHORTCUT KEYS *** \\
+        if (result[array[i]+'_checkbox']['keyBank']) {
+
           var characters = "";
-          for (var x in result[array[i]]) {
+
+          for (var x in result[array[i]+'_checkbox']['keyBank']) {
+
             var letter = String.fromCharCode(x);
             characters += letter;
+
           }
-          characters.split('').join(' '); // [FIX] buggy, no effect
+
+          characters = characters.split('').join('+');
+
           $('#'+array[i]).attr('value', characters);
-          if (result[array[i]+'_jid']) {
-            $('#'+array[i]+'_link').html(result[array[i]+'_name']+' (click to change)');
-            Settings[array[i]+'_jid'] = result[array[i]+'_jid'];
-            Settings[array[i]+'_name'] = result[array[i]+'_name'];
-          } else {
-            $('#'+array[i]+'_link').html('no one (click to assign)');
-          }
+
+          // *** IF FRIENDS *** \\
+          if (result[array[i]+'_checkbox']['friendJid']) {
+
+            $('#'+array[i]+'_link').html(result[array[i]+'_checkbox']['friendName']+' (click to change)');
+
+            Settings[array[i]+'_jid'] = result[array[i]+'_checkbox']['friendJid'];
+            Settings[array[i]+'_name'] = result[array[i]+'_checkbox']['friendName'];
+
+          } 
+
         }
-      } else {
-        $('#'+array[i]+'_checkbox').prop('checked', false);
-        $('#'+array[i]).attr('placeholder', 'Enter hotkey letters');
+
+        // *** IF TIMEOUT / FADEOUT *** \\
+        if (result[array[i]+'_checkbox']['timespan']) {
+
+          var timespan = result[array[i]+'_checkbox']['timespan'].toString();
+          $('#'+array[i]).val(timespan);  
+
+        }
+
       }
+
+      // Else if option is false in chrome.storage...
+      else {
+
+        // Uncheck the checkbox
+        $('#'+array[i]+'_checkbox').prop('checked', false);
+
+        // Set the default value
+        switch (array[i]) {
+
+          case 'onoff':
+          case 'first':
+          case 'second':
+          case 'third':
+          case 'fourth':
+          case 'fifth':
+            $('#'+array[i]).attr('placeholder', 'Enter hotkey letters');
+            $('#'+array[i]+'_link').html('no one (click to assign)');
+            break;
+          case 'timeout':
+          case 'fadeout':
+            $('#'+array[i]).val('Select');
+            break;
+          default:
+            console.log('No value. Something is wrong!');
+
+        }
+
+      }
+
     }
 
   });
@@ -304,6 +298,9 @@ $(document).ready(function() {
     });
   });
 
+  // ******* NEW LOGIN CLICK LISTENER [10/12/14] ********* \\
+
+
   // FRIEND_LINK CLICKS LISTENER \\
   $('.friend_link').click(function() {
     console.log('.friend_link click detected.');
@@ -345,67 +342,24 @@ $(document).ready(function() {
   $('#save').click(function() {
     console.log('"Save" clicked.');
     
-    Settings.on_save_onoff('onoff_checkbox', 'onoff');
-    Settings.on_save_friends('first_checkbox', 'first', 'first_jid', 'first_name');
-    Settings.on_save_friends('second_checkbox', 'second', 'second_jid', 'second_name');
-    Settings.on_save_friends('third_checkbox', 'third', 'third_jid', 'third_name');
-    Settings.on_save_friends('fourth_checkbox', 'fourth', 'fourth_jid', 'fourth_name');
-    Settings.on_save_friends('fifth_checkbox', 'fifth', 'fifth_jid', 'fifth_name');
-    Settings.on_save_regular('timeout_checkbox', 'timeout');
-    Settings.on_save_regular('fadeout_checkbox', 'fadeout');
-    Settings.on_saved();
+    Settings.saveOption('onoff_checkbox', 'onoff');
+    Settings.saveOption('first_checkbox', 'first', 'first_jid', 'first_name');
+    Settings.saveOption('second_checkbox', 'second', 'second_jid', 'second_name');
+    Settings.saveOption('third_checkbox', 'third', 'third_jid', 'third_name');
+    Settings.saveOption('fourth_checkbox', 'fourth', 'fourth_jid', 'fourth_name');
+    Settings.saveOption('fifth_checkbox', 'fifth', 'fifth_jid', 'fifth_name');
+    Settings.saveOption('timeout_checkbox', 'timeout');
+    Settings.saveOption('fadeout_checkbox', 'fadeout');
+    Settings.onSaved();
   });
 
 });
 
-// [DELETE?] Moved to 'background.js' except attach bind (5/15/14)
-/* ======================= CUSTOM EVENT BINDS ====================== 
+/* ======================================================================
+=                       SETTINGS DOM EVENT BINDS                        =
+====================================================================== */
 
-// CONNECT EVENT \\
-$(document).bind('connect', function (ev, data) {
-  Whisper.connection = new Strophe.Connection(
-    'http://ec2-54-186-151-244.us-west-2.compute.amazonaws.com:5280/http-bind');
-
-  Whisper.connection.connect(data.jid+'@chat.facebook.com', data.password, Whisper.on_connect);
-});
-
-// CONNECTED EVENT \\
-$(document).bind('connected', function () {
-  console.log('Connected.');
-  console.log(Whisper.connection);
-
-  var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});
-  
-  Whisper.connection.sendIQ(iq, Whisper.on_roster);
-  Whisper.connection.addHandler(Whisper.on_roster_changed, "jabber:iq:roster", "iq", "set");
-
-  // [ADDED] background page (5/9/14)
-  var bg = chrome.extension.getBackgroundPage();
-  bg.saveInfo(Whisper.connection.authzid, Whisper.connection.pass);
-});
-
-// ATTACH EVENT \\
-$(document).bind('attach', function (ev, data) {
-  Whisper.connection = new Strophe.Connection(
-   'http://ec2-54-186-151-244.us-west-2.compute.amazonaws.com:5280/http-bind');
-
-  Whisper.connection.attach(data.jid, data.sid, data.rid, Whisper.on_connect);
-});
-
-// DISCONNECTED EVENT \\
-$(document).bind('disconnected', function () {
-  Whisper.del_storage();
-  Whisper.connection = null;
-  Whisper.pending_subscriber = null;
-  Whisper.on_connect;
-
-  $('#roster-area ul').empty();
-  // [DELETE] $('#chat-area ul').empty();
-  // [DELETE] $('#chat-area div').remove();
-});
-==================================================================== */
-
-// ROSTER LOADED EVENT \\
+// ROSTER LOADED EVENT LISTENER \\
 $(document).bind('roster', function() {
   $('.roster-contact').on('click', function() {
     console.log('.roster-contact click detected.');
@@ -449,24 +403,3 @@ $(document).bind('roster', function() {
     $('#roster-area').fadeOut('fast');
   });
 });
-
-/* [DELETE] Don't need this anymore, Strophe connection lives on background page (5/15/14)
-// UNLOAD EVENT (Leaving page / for session info save) \\
-$(window).bind('unload', function () {
-  console.log('Unload triggered.');
-  if (Whisper.connection !== null) {
-    // Manually save JID/SID/RID to chrome.storage here
-    chrome.storage.sync.set({
-      jid: Whisper.connection.jid,
-      sid: Whisper.connection._proto.sid,
-      rid: Whisper.connection._proto.rid
-    }, function() {
-      console.log('JID/SID/RID saved to chrome.storage');
-      //console.log('Whisper.storage JID: '+Whisper.storage.jid+' and SID: '+Whisper.storage.sid+' and RID: '+Whisper.storage.rid);
-    });
-  } else {
-    // Delete JID/SID/RID from chrome.storage
-    Whisper.del_storage();
-  }
-});
-*/
