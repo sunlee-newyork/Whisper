@@ -3,10 +3,10 @@
 // As of 5/15/15: Creating setting.js's very own Object. Only options saving occurs on this page, no Strophe connections
 
 /* ======================================================================
-=                           SETTINGS OBJECT                             =
+=                            OPTIONS OBJECT                             =
 ====================================================================== */
 
-var Settings = {
+var Options = {
 
   status: null,
 
@@ -49,69 +49,85 @@ var Settings = {
     return keyBank;
   },
 
-  saveOption: function (checkbox, value, friendJid, friendName) {
-    // Settings need to be passed as an object to chrome.storage, so create placeholder
+  save: function (option, friendJid, friendName) {
+    // Options need to be passed as an object to chrome.storage, so create placeholder
     var optionsPlaceholder = {};
 
-    // If the option is checked in the settings page...
-    if ($('#'+checkbox).is(':checked')) {
+    // Create namespaced object
+    optionsPlaceholder[option] = {};
 
-      console.log(checkbox+' detected. Chrome.storage triggered.');
+    // If the option is checked in the options page...
+    if ($('#'+option+'_checkbox').is(':checked')) {
 
-      // Create namespaced object
-      optionsPlaceholder[checkbox] = {};
+      console.log(option+' detected. Chrome.storage triggered.');
 
       // Set enabled to true
-      optionsPlaceholder[checkbox]['enabled'] = true;
-
-      console.log('parseInt value = ' + parseInt(value));
-
-      // *** IF TIMEOUT/FADEOUT *** \\
-      if (parseInt(value) == NaN) {
-
-        var timespanValue = parseInt($('#'+value).val());
-        console.log('Timespan value = ' + timespanValue);
-        console.log('Typeof timespan value: ' + typeof timespanValue);
-
-        optionsPlaceholder[checkbox]['timespan'] = timespanValue;
-
-        console.log('Options placeholder: ', optionsPlaceholder);
-
-      } 
+      optionsPlaceholder[option]['enabled'] = true;
 
       // *** IF SHORTCUT KEYS *** \\
-      else {
+      if (isNaN(parseInt($('#'+option).val()))) {
+
+        console.log('Not a number!');
 
         // Get value string
-        var keysRawValue = $('#'+value).val().toLowerCase();
+        var keysRawValue = $('#'+option).val().toLowerCase();
         console.log('keysRawValue: '+keysRawValue);
+
+        keysRawValue = keysRawValue.split('+').join('');
+        console.log('keysRawValue without "+": ' + keysRawValue);
 
         // Call key converter method, convert to keycode
         var keyBank = this.convertRawKeys(keysRawValue);
 
         // Save key bank to this options object
-        optionsPlaceholder[checkbox]['keyBank'] = keyBank;
+        optionsPlaceholder[option]['keyBank'] = keyBank;
         console.log('Options placeholder: ', optionsPlaceholder);
 
         // *** IF FRIENDS OPTION *** \\
-        if (friendJid !== undefined) {
-          optionsPlaceholder[checkbox]['friendJid'] = this[friend_jid];
-          optionsPlaceholder[checkbox]['friendName'] = this[friend_name];
+        if (friendJid) {
+          optionsPlaceholder[option]['friendJid'] = this[friend_jid];
+          optionsPlaceholder[option]['friendName'] = this[friend_name];
         }
+
+        /* This gets prompted even when checkbox is not checked. Need to get back to this.
+        // If friend is not assigned from roster...
+        else {
+          alert('Friend not assigned! Please assign a friend from the roster first.');
+          return;
+        }
+        */
+      } 
+
+      // *** IF TIMEOUT/FADEOUT *** \\
+      else {
+
+        console.log('Yes it is a number!');
+
+        var timespan = parseInt($('#'+option).val());
+        console.log('Timespan = ' + timespan);
+        console.log('Typeof timespan: ' + typeof timespan);
+
+        optionsPlaceholder[option]['timespan'] = timespan;
+
+        console.log('Options placeholder: ', optionsPlaceholder);
 
       }
     }
 
     // Still necessary in case user unchecks the option
     else {
-      console.log(checkbox + ' not detected. Setting option to \'disabled\' in chrome.storage');
+      console.log(option + ' not detected. Setting option to \'disabled\' in chrome.storage');
 
       // Disable this option
-      optionsPlaceholder[checkbox] = false;
+      optionsPlaceholder[option]['enabled'] = false;
     }
 
-    // Save settings to chrome.storage
+    // Save options to chrome.storage
     chrome.storage.sync.set(optionsPlaceholder);
+
+    chrome.storage.sync.get(function (result) {
+      console.log(result);
+    });
 
   },
 
@@ -125,7 +141,7 @@ var Settings = {
 }
 
 /* ======================================================================
-=                         SETTINGS DOM READY                            =
+=                          OPTIONS DOM READY                            =
 ====================================================================== */
 
 $(document).ready(function() {
@@ -143,46 +159,50 @@ $(document).ready(function() {
       console.log(array[i]);
 
       // If option is enabled in chrome.storage...
-      if (result[array[i]+'_checkbox']) {
+      if (result[array[i]].enabled) {
 
-        // Check the checkbox in the settings page
+        // Check the checkbox in the options page
         $('#'+array[i]+'_checkbox').prop('checked', true);
 
-        // Set the option's value in the settings page
-        $('#'+array[i]).val(result[array[i]]);
-
         // *** IF SHORTCUT KEYS *** \\
-        if (result[array[i]+'_checkbox']['keyBank']) {
+        if (result[array[i]].keyBank) {
 
           var characters = "";
 
-          for (var x in result[array[i]+'_checkbox']['keyBank']) {
+          for (var x in result[array[i]]['keyBank']) {
 
+            console.log('Var x: ' + x);
             var letter = String.fromCharCode(x);
+            console.log('Letter: ' + letter);
             characters += letter;
 
           }
 
+          console.log('Characters before split: ' + characters);
+
           characters = characters.split('').join('+');
+
+          console.log('Characters after split: ' + characters);
 
           $('#'+array[i]).attr('value', characters);
 
           // *** IF FRIENDS *** \\
-          if (result[array[i]+'_checkbox']['friendJid']) {
+          if (result[array[i]]['friendJid']) {
 
-            $('#'+array[i]+'_link').html(result[array[i]+'_checkbox']['friendName']+' (click to change)');
+            $('#'+array[i]+'_link').html(result[array[i]]['friendName']+' (click to change)');
 
-            Settings[array[i]+'_jid'] = result[array[i]+'_checkbox']['friendJid'];
-            Settings[array[i]+'_name'] = result[array[i]+'_checkbox']['friendName'];
+            Options[array[i]+'_jid'] = result[array[i]]['friendJid'];
+            Options[array[i]+'_name'] = result[array[i]]['friendName'];
 
           } 
 
         }
 
         // *** IF TIMEOUT / FADEOUT *** \\
-        if (result[array[i]+'_checkbox']['timespan']) {
+        if (result[array[i]].timespan) {
 
-          var timespan = result[array[i]+'_checkbox']['timespan'].toString();
+          console.log(result[array[i]].timespan);
+          var timespan = result[array[i]].timespan.toString();
           $('#'+array[i]).val(timespan);  
 
         }
@@ -192,29 +212,7 @@ $(document).ready(function() {
       // Else if option is false in chrome.storage...
       else {
 
-        // Uncheck the checkbox
-        $('#'+array[i]+'_checkbox').prop('checked', false);
-
-        // Set the default value
-        switch (array[i]) {
-
-          case 'onoff':
-          case 'first':
-          case 'second':
-          case 'third':
-          case 'fourth':
-          case 'fifth':
-            $('#'+array[i]).attr('placeholder', 'Enter hotkey letters');
-            $('#'+array[i]+'_link').html('no one (click to assign)');
-            break;
-          case 'timeout':
-          case 'fadeout':
-            $('#'+array[i]).val('Select');
-            break;
-          default:
-            console.log('No value. Something is wrong!');
-
-        }
+        console.log('No option detected for ' + array[i] + '. Leaving option blank.');
 
       }
 
@@ -232,32 +230,32 @@ $(document).ready(function() {
       console.log('Status received: ', message.content);
       switch (message.content) {
         case 1: 
-          Settings.status = 1;
+          Options.status = 1;
           $('#login-status').html('Connecting...').css('color', 'rgb(50,200,50)');
           console.log('Connecting initiated...');
           break;
         case 2:
-          Settings.status = 2;
+          Options.status = 2;
           $('#login-status').html('Connection failed').css('color', 'rgb(200,0,0)');
           console.log('Connection failed.');
           break;
         case 3:
-          Settings.status = 3;
+          Options.status = 3;
           $('#login-status').html('Authenticating...').css('color', 'rgb(50,200,50)');
           console.log('Authenticating initiated...');
           break;
         case 4:
-          Settings.status = 4;
+          Options.status = 4;
           $('#login-status').html('Authentication failed').css('color', 'rgb(200,0,0)');
           console.log('Authentication failed.');
           break;
         case 5:
-          Settings.status = 5;
+          Options.status = 5;
           $('#login-status').html('Connected!').css('color', 'rgb(0,150,0)');
           // $('#user_login').html(Whisper.connection.authcid); [FIX] Get this from background page as message, on connect (5/15/14)
           break;
         case 6:
-          Settings.status = 6;
+          Options.status = 6;
           $('#roster-area ul').empty();
           $('#login-status').html('Disconnected').css('color', 'rgb(200,0,0)');
           $('#attach-status').html('No');
@@ -265,7 +263,7 @@ $(document).ready(function() {
           console.log('Disconnected.');
           break;
         case 7:
-          Settings.status = 7;
+          Options.status = 7;
           $('#login-status').html('Disconnecting...').css('color', 'rgb(200,100,100)');
           console.log('Disconnecting initiated...');
           break;
@@ -279,7 +277,13 @@ $(document).ready(function() {
   $('#login_submit').click(function() {
     // [EDITED] Deleted 'connect' trigger, added background login(); (5/15/14)
     var bg = chrome.extension.getBackgroundPage();
-    bg.login($('#username').val().toLowerCase(), $('#password').val());
+
+    console.log(bg);
+
+    var username = $('#username').val().toLowerCase();
+    var password = $('#password').val().toLowerCase();
+
+    bg.Handler.login(username, password);
 
     $('#username').val('');
     $('#password').val('');
@@ -306,25 +310,25 @@ $(document).ready(function() {
     console.log('.friend_link click detected.');
 
     // [ADDED] conditional to see if user is already logged in (5/6/14)
-    if (Settings.status === 5) {
+    if (Options.status === 5) {
       $('#roster-area').show();
       var currentElement = $(this)[0];
       console.log(currentElement);
       var clicked = $(this)[0].id;
       console.log('Clicked ID: '+clicked);
       switch(clicked) {
-        case 'first_link': Settings.which_friend = 'first';
+        case 'first_link': Options.which_friend = 'first';
           break;
-        case 'second_link': Settings.which_friend = 'second';
+        case 'second_link': Options.which_friend = 'second';
           break;
-        case 'third_link': Settings.which_friend = 'third';
+        case 'third_link': Options.which_friend = 'third';
           break;
-        case 'fourth_link': Settings.which_friend = 'fourth';
+        case 'fourth_link': Options.which_friend = 'fourth';
           break;
-        case 'fifth_link': Settings.which_friend = 'fifth';
+        case 'fifth_link': Options.which_friend = 'fifth';
           break;
       }
-      console.log('Settings.which_friend: '+Settings.which_friend);
+      console.log('Options.which_friend: '+Options.which_friend);
       $(document).trigger('roster', function() {
         console.log('Roster event triggered.');
       });  
@@ -342,21 +346,21 @@ $(document).ready(function() {
   $('#save').click(function() {
     console.log('"Save" clicked.');
     
-    Settings.saveOption('onoff_checkbox', 'onoff');
-    Settings.saveOption('first_checkbox', 'first', 'first_jid', 'first_name');
-    Settings.saveOption('second_checkbox', 'second', 'second_jid', 'second_name');
-    Settings.saveOption('third_checkbox', 'third', 'third_jid', 'third_name');
-    Settings.saveOption('fourth_checkbox', 'fourth', 'fourth_jid', 'fourth_name');
-    Settings.saveOption('fifth_checkbox', 'fifth', 'fifth_jid', 'fifth_name');
-    Settings.saveOption('timeout_checkbox', 'timeout');
-    Settings.saveOption('fadeout_checkbox', 'fadeout');
-    Settings.onSaved();
+    Options.save('onoff');
+    Options.save('first', 'first_jid', 'first_name');
+    Options.save('second', 'second_jid', 'second_name');
+    Options.save('third', 'third_jid', 'third_name');
+    Options.save('fourth', 'fourth_jid', 'fourth_name');
+    Options.save('fifth', 'fifth_jid', 'fifth_name');
+    Options.save('timeout');
+    Options.save('fadeout');
+    Options.onSaved();
   });
 
 });
 
 /* ======================================================================
-=                       SETTINGS DOM EVENT BINDS                        =
+=                        OPTIONS DOM EVENT BINDS                        =
 ====================================================================== */
 
 // ROSTER LOADED EVENT LISTENER \\
@@ -368,36 +372,36 @@ $(document).bind('roster', function() {
     var name = $(this).find(".roster-name").text();
     console.log('.roster-contact NAME: '+name);
     
-    switch(Settings.which_friend) {
+    switch(Options.which_friend) {
       case 'first':
-        Settings.first_jid = jid;
-        Settings.first_name = name;
-        console.log('Settings.first_jid: '+Settings.first_jid+' and name: '+Settings.first_name);
-        $('#first_link').html(Settings.first_name+' (click to change)');
+        Options.first_jid = jid;
+        Options.first_name = name;
+        console.log('Options.first_jid: '+Options.first_jid+' and name: '+Options.first_name);
+        $('#first_link').html(Options.first_name+' (click to change)');
         break;
       case 'second':
-        Settings.second_jid = jid;
-        Settings.second_name = name;
-        console.log('Settings.second_jid: '+Settings.second_jid+' and name: '+Settings.second_name);
-        $('#second_link').html(Settings.second_name+' (click to change)');
+        Options.second_jid = jid;
+        Options.second_name = name;
+        console.log('Options.second_jid: '+Options.second_jid+' and name: '+Options.second_name);
+        $('#second_link').html(Options.second_name+' (click to change)');
         break;
       case 'third':
-        Settings.third_jid = jid;
-        Settings.third_name = name;
-        console.log('Settings.first_jid: '+Settings.third_jid+' and name: '+Settings.third_name);
-        $('#third_link').html(Settings.third_name+' (click to change)');
+        Options.third_jid = jid;
+        Options.third_name = name;
+        console.log('Options.first_jid: '+Options.third_jid+' and name: '+Options.third_name);
+        $('#third_link').html(Options.third_name+' (click to change)');
         break;
       case 'fourth':
-        Settings.fourth_jid = jid;
-        Settings.fourth_name = name;
-        console.log('Settings.fourth_jid: '+Settings.fourth_jid+' and name: '+Settings.fourth_name);
-        $('#fourth_link').html(Settings.fourth_name+' (click to change)');
+        Options.fourth_jid = jid;
+        Options.fourth_name = name;
+        console.log('Options.fourth_jid: '+Options.fourth_jid+' and name: '+Options.fourth_name);
+        $('#fourth_link').html(Options.fourth_name+' (click to change)');
         break; 
       case 'fifth':
-        Settings.fifth_jid = jid;
-        Settings.fifth_name = name;
-        console.log('Settings.fifth_jid: '+Settings.fifth_jid+' and name: '+Settings.fifth_name);
-        $('#fifth_link').html(Settings.fifth_name+' (click to change)');
+        Options.fifth_jid = jid;
+        Options.fifth_name = name;
+        console.log('Options.fifth_jid: '+Options.fifth_jid+' and name: '+Options.fifth_name);
+        $('#fifth_link').html(Options.fifth_name+' (click to change)');
         break;
     }
     $('#roster-area').fadeOut('fast');

@@ -1,6 +1,10 @@
 //=== AS OF 4/15/14, CHROME.STORAGE WORKING VERSION ===\\
 // Check if this file is loaded [10/12/14]
-console.log('Whisper');
+console.log('connection.js loaded.');
+
+/* ======================================================================
+=                           CONNECTION OBJECT                           =
+====================================================================== */
 
 var Connector = {
 
@@ -15,45 +19,45 @@ var Connector = {
 
   onConnect: function (status) {
     if (status === Strophe.Status.CONNECTING) {
-      Whisper.currentStatus = 1;
+      this.currentStatus = 1;
       $('#login-status').html('Connecting...').css('color', 'rgb(50,200,50)');
       console.log('Connecting initiated...');
     } else if (status === Strophe.Status.CONNFAIL) {
-      Whisper.currentStatus = 2;
+      this.currentStatus = 2;
       $('#login-status').html('Connection failed').css('color', 'rgb(200,0,0)');
       console.log('Connection failed.');
     } else if (status === Strophe.Status.AUTHENTICATING) {
-      Whisper.currentStatus = 3;
+      this.currentStatus = 3;
       $('#login-status').html('Authenticating...').css('color', 'rgb(50,200,50)');
       console.log('Authenticating initiated...');
     } else if (status === Strophe.Status.AUTHFAIL) {
-      Whisper.currentStatus = 4;
+      this.currentStatus = 4;
       $('#login-status').html('Authentication failed').css('color', 'rgb(200,0,0)');
       console.log('Authentication failed.');
     } else if (status === Strophe.Status.CONNECTED) {
-      Whisper.currentStatus = 5;
+      this.currentStatus = 5;
       $('#login-status').html('Connected!').css('color', 'rgb(0,150,0)');
-      $('#user_login').html(Whisper.connection.authcid);
+      $('#user_login').html(this.connection.authcid);
       $(document).trigger('connected');
     } else if (status === Strophe.Status.DISCONNECTING) {
-      Whisper.currentStatus = 7;
+      this.currentStatus = 7;
       $('#login-status').html('Disconnecting...').css('color', 'rgb(200,100,100)');
       console.log('Disconnecting initiated...');
     } else if (status === Strophe.Status.DISCONNECTED) {
-      Whisper.currentStatus = 6;
+      this.currentStatus = 6;
       $(document).trigger('disconnected');
       $('#login-status').html('Disconnected').css('color', 'rgb(200,0,0)');
       $('#attach-status').html('No');
       $('#user_login').html('no one');
       console.log('Disconnected.');
     } else if (status === Strophe.Status.ATTACHED) {
-      Whisper.currentStatus = 8;
+      this.currentStatus = 8;
       $('#attach-status').html('Yes');
       $('#login-status').html('Session').css('color', 'rgb(0,150,0)');
-      $('#user_login').html(Strophe.getNodeFromJid(Whisper.connection.jid));
+      $('#user_login').html(Strophe.getNodeFromJid(this.connection.jid));
       var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});
-      Whisper.connection.sendIQ(iq, Whisper.onRoster);
-      Whisper.connection.addHandler(Whisper.onRosterChanged, "jabber:iq:roster", "iq", "set");
+      this.connection.sendIQ(iq, this.onRoster);
+      this.connection.addHandler(this.onRosterChanged, "jabber:iq:roster", "iq", "set");
       console.log('Session attached.');
     }
   },
@@ -65,7 +69,7 @@ var Connector = {
       var name = $(this).attr('name') || jid;
 
       // transform jid into an id
-      var jid_id = Whisper.convertJidToId(jid);
+      var jid_id = this.convertJidToId(jid);
 
       var contact = $("<li id='" + jid_id + "'>" +
                     "<div class='roster-contact offline'>" +
@@ -75,24 +79,24 @@ var Connector = {
                     jid +
                     "</div></div></li>");
 
-      Whisper.insertContact(contact);
+      this.insertContact(contact);
     });
 
     // set up presence handler and send initial presence
-    Whisper.connection.addHandler(Whisper.onPresence, null, "presence");
-    Whisper.connection.send($pres());
+    this.connection.addHandler(this.onPresence, null, "presence");
+    this.connection.send($pres());
   },
 
   insertContact: function (elem) {
     var jid = elem.find('.roster-jid').text();
-    var pres = Whisper.presenceValue(elem.find('.roster-contact'));
+    var pres = this.presenceValue(elem.find('.roster-contact'));
     
     var contacts = $('#roster-area li');
 
     if (contacts.length > 0) {
       var inserted = false;
       contacts.each(function () {
-        var cmp_pres = Whisper.presenceValue(
+        var cmp_pres = this.presenceValue(
           $(this).find('.roster-contact'));
         var cmp_jid = $(this).find('.roster-jid').text();
 
@@ -122,11 +126,11 @@ var Connector = {
   onPresence: function (presence) {
     var ptype = $(presence).attr('type');
     var from = $(presence).attr('from');
-    var jid_id = Whisper.convertJidToId(from);
+    var jid_id = this.convertJidToId(from);
 
     if (ptype === 'subscribe') {
       // populate pendingSubscriber, the approve-jid span, and open the dialog
-      Whisper.pendingSubscriber = from;
+      this.pendingSubscriber = from;
       $('#approve-jid').text(Strophe.getBareJidFromJid(from));
       $('#approve_dialog').dialog('open');
     } else if (ptype !== 'error') {
@@ -147,11 +151,11 @@ var Connector = {
 
       var li = contact.parent();
       li.remove();
-      Whisper.insertContact(li);
+      this.insertContact(li);
     }
 
     // reset addressing for user since their presence changed
-    var jid_id = Whisper.convertJidToId(from);
+    var jid_id = this.convertJidToId(from);
     $('#chat-' + jid_id).data('jid', Strophe.getBareJidFromJid(from));
 
     return true;
@@ -162,7 +166,7 @@ var Connector = {
       var sub = $(this).attr('subscription');
       var jid = $(this).attr('jid');
       var name = $(this).attr('name') || jid;
-      var jid_id = Whisper.convertJidToId(jid);
+      var jid_id = this.convertJidToId(jid);
 
       if (sub === 'remove') {
         // contact is being removed
@@ -182,7 +186,7 @@ var Connector = {
         if ($('#' + jid_id).length > 0) {
           $('#' + jid_id).replaceWith(contact_html);
         } else {
-          Whisper.insertContact($(contact_html));
+          this.insertContact($(contact_html));
         }
       }
     });
@@ -214,11 +218,11 @@ var Connector = {
       'sid', 
       'rid'
     ], function() {
-      Whisper.storage.jid = null;
-      Whisper.storage.sid = null;
-      Whisper.storage.rid = null;      
+      this.storage.jid = null;
+      this.storage.sid = null;
+      this.storage.rid = null;      
       console.log('JID/SID/RID removed from chrome.storage');
-      console.log('Whisper.storage JID: '+Whisper.storage.jid+' and SID: '+Whisper.storage.sid+' and RID: '+Whisper.storage.rid);
+      console.log('this.storage JID: '+this.storage.jid+' and SID: '+this.storage.sid+' and RID: '+this.storage.rid);
     });
   },
 */
@@ -231,7 +235,7 @@ var Connector = {
     console.log(full_jid);
     var jid = Strophe.getBareJidFromJid(full_jid);
     console.log(jid);
-    var jid_id = Whisper.convertJidToId(jid);
+    var jid_id = this.convertJidToId(jid);
     console.log(jid_id);
 
     // IF CHAT BOX FOR SPECIFIED JID DOESN'T EXIST YET, MAKE ONE
@@ -266,7 +270,7 @@ var Connector = {
       );
       $('#chat-'+jid_id).fadeIn('fast');
       // make person div scrollable
-      Whisper.scrollChat(jid_id);
+      this.scrollChat(jid_id);
     }
 
     // FIND THE MESSAGE TEXT AND ADD TO MESSAGE DIV
@@ -322,14 +326,14 @@ var Connector = {
       console.log('Body appended to #chat-text.');
       $('#chat-'+jid_id).fadeIn('fast');
 
-      Whisper.scrollChat(jid_id);
+      this.scrollChat(jid_id);
     }
 
     // Incoming message fadeout detect
-    if (Whisper.fadeout !== null) {
+    if (this.fadeout !== null) {
       var fadeout = setTimeout(function() {
         $("#chat-"+jid_id).fadeOut('slow');
-      }, Whisper.fadeout);  
+      }, this.fadeout);  
     }
 
     $('#chat-'+jid_id).click(function() {
@@ -369,12 +373,12 @@ var Connector = {
     sessionStorage.removeItem('sid');
     sessionStorage.removeItem('rid');
 
-    Whisper.storage.jid = null;
-    Whisper.storage.sid = null;
-    Whisper.storage.rid = null;
+    this.storage.jid = null;
+    this.storage.sid = null;
+    this.storage.rid = null;
 
     console.log('JID/SID/RID removed from sessionStorage.');
-    console.log('Whisper.storage JID: '+Whisper.storage.jid+' and SID: '+Whisper.storage.sid+' and RID: '+Whisper.storage.rid);
+    console.log('Whisper.storage JID: '+this.storage.jid+' and SID: '+this.storage.sid+' and RID: '+this.storage.rid);
   },
 
   onoff: null,

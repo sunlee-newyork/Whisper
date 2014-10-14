@@ -3,15 +3,15 @@
 <head>
 	<title>Whisper Options</title>
 	
-	<script src="scripts/jquery-1.11.0.min.js"></script>
-  <script src="settings.js"></script>
-  <link rel="stylesheet" type="text/css" href="settings.css" media="screen"/>
+	<script src="../lib/jquery-1.11.0.min.js"></script>
+  <script src="options.js"></script>
+  <link rel="stylesheet" type="text/css" href="options.css" media="screen"/>
 </head>
 <body>
 	<div class="container">
 		<div class="header">
 			<img class="icon" src="" /> <!-- Whisper icon goes here -->
-			<div class="text big">Whisper settings</div>
+			<div class="text big">Whisper options</div>
 		</div>
 		<div class="divide_bar"></div>
 		<div class="main">
@@ -20,36 +20,36 @@
 				<div class="option onoff">
 					<input type="checkbox" id="onoff_checkbox" />
 					<div class="text_small_container"><span class="text small">Turn on/off toggle hotkey</span></div>
-					<input class="input hotkey" id="onoff" /> <!-- Going to have to research how to assign pressed keys -->
+					<input class="input hotkey" id="onoff" placeholder="Enter hotkey letters" /> <!-- Going to have to research how to assign pressed keys -->
 				</div>
 				<div class="option first">
 					<input type="checkbox" id="first_checkbox" />
 					<div class="text_small_container"><span class="text small">1st friend hotkey</span></div>
-					<input class="input hotkey" id="first" /> <!-- Going to have to research how to assign pressed keys -->
+					<input class="input hotkey" id="first" placeholder="Enter hotkey letters" /> <!-- Going to have to research how to assign pressed keys -->
 					<span class="text small">Set to <span class="friend_link" id="first_link">no one (click to assign)</span></span>
 				</div>
 				<div class="option second">
 					<input type="checkbox" id="second_checkbox" />
 					<div class="text_small_container"><span class="text small">2nd friend hotkey</span></div>
-					<input class="input hotkey" id="second" /> <!-- Going to have to research how to assign pressed keys -->
+					<input class="input hotkey" id="second" placeholder="Enter hotkey letters" /> <!-- Going to have to research how to assign pressed keys -->
 					<span class="text small">Set to <span class="friend_link" id="second_link">no one (click to assign)</span></span>
 				</div>
 				<div class="option third">
 					<input type="checkbox" id="third_checkbox" />
 					<div class="text_small_container"><span class="text small">3rd friend hotkey</span></div>
-					<input class="input hotkey" id="third" /> <!-- Going to have to research how to assign pressed keys -->
+					<input class="input hotkey" id="third" placeholder="Enter hotkey letters" /> <!-- Going to have to research how to assign pressed keys -->
 					<span class="text small">Set to <span class="friend_link" id="third_link">no one (click to assign)</span></span>
 				</div>
 				<div class="option fourth">
 					<input type="checkbox" id="fourth_checkbox" />
 					<div class="text_small_container"><span class="text small">4th friend hotkey</span></div>
-					<input class="input hotkey" id="fourth" /> <!-- Going to have to research how to assign pressed keys -->
+					<input class="input hotkey" id="fourth" placeholder="Enter hotkey letters" /> <!-- Going to have to research how to assign pressed keys -->
 					<span class="text small">Set to <span class="friend_link" id="fourth_link">no one (click to assign)</span></span>
 				</div>
 				<div class="option fifth">
 					<input type="checkbox" id="fifth_checkbox" />
 					<div class="text_small_container"><span class="text small">5th friend hotkey</span></div>
-					<input class="input hotkey" id="fifth" /> <!-- Going to have to research how to assign pressed keys -->
+					<input class="input hotkey" id="fifth" placeholder="Enter hotkey letters" /> <!-- Going to have to research how to assign pressed keys -->
 					<span class="text small">Set to <span class="friend_link" id="fifth_link">no one (click to assign)</span></span>
 				</div>
 			</div>	
@@ -60,7 +60,7 @@
 					<div class="text_small_container"><span class="text small">Timeout (for afk)</span></div>
 					<select class="input" id="timeout">
 						<option>Select</option>
-						<option value="1800000">30 minutes</option>
+						<option value=1800000>30 minutes</option>
 						<option value="900000">15 minutes</option>
 						<option value="600000">10 minutes</option>
 						<option value="300000">5 minutes</option> <!-- Need to set to default -->

@@ -1,8 +1,3 @@
-#whisper_incoming {
-	position:fixed;
-	display:block;
-}
-
 .chat-div {
 	z-index:10000;
 	position:fixed;

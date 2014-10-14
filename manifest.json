@@ -8,23 +8,25 @@
   "version": "1",
 
   "browser_action": {
-    "default_icon": "icon.png"
+    "default_icon": "imgs/icon.png"
   },
 
-  "options_page": "settings.html",
+  "options_page": "options/options.html",
 
   "permissions": [  
     "tabs",
     "<all_urls>",
-    "storage"
+    "storage",
+    "background"
   ],
 
   "background": {
     "scripts": [
-      "scripts/jquery-1.11.0.min.js",
-      "scripts/strophe.js",
-      "connection.js",
-      "background.js"
+      "lib/jquery-1.11.0.min.js",
+      "lib/strophe.js",
+      "background/connection.js",
+      "background/message.js",
+      "background/background.js"
     ],
     "persistent": true
   },
@@ -33,10 +35,11 @@
     {
       "matches": [ "<all_urls>" ],
       "css": [
-        "message.css"
+        "tab/tab.css"
       ],
       "js": [
-        "scripts/jquery-1.11.0.min.js"
+        "lib/jquery-1.11.0.min.js",
+        "tab/tab.js"
       ],
       "run_at": "document_end",
       "all_frames": false
