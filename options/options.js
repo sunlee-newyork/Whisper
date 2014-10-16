@@ -280,10 +280,10 @@ $(document).ready(function() {
 
     console.log(bg);
 
-    var username = $('#username').val().toLowerCase();
-    var password = $('#password').val().toLowerCase();
+    //var username = $('#username').val().toLowerCase();
+    //var password = $('#password').val().toLowerCase();
 
-    bg.Handler.login(username, password);
+    bg.Handler.login($('#username').val().toLowerCase(), $('#password').val().toLowerCase());
 
     $('#username').val('');
     $('#password').val('');

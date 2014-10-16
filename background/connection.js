@@ -9,7 +9,6 @@ console.log('connection.js loaded.');
 var Connector = {
 
   connection: null,
-  currentStatus: Number,
 
   convertJidToId: function (jid) {
     return Strophe.getBareJidFromJid(jid)
@@ -17,41 +16,44 @@ var Connector = {
       .replace(/\./g, "-");
   },
 
-  onConnect: function (status) {
+  onConnect: function (status, error) {
     if (status === Strophe.Status.CONNECTING) {
-      this.currentStatus = 1;
+      //this.currentStatus = 1;  // Don't need this, can call Connector.connection.currenStatus instead.
       $('#login-status').html('Connecting...').css('color', 'rgb(50,200,50)');
       console.log('Connecting initiated...');
     } else if (status === Strophe.Status.CONNFAIL) {
-      this.currentStatus = 2;
+      //this.currentStatus = 2;
       $('#login-status').html('Connection failed').css('color', 'rgb(200,0,0)');
       console.log('Connection failed.');
     } else if (status === Strophe.Status.AUTHENTICATING) {
-      this.currentStatus = 3;
+      //this.currentStatus = 3;
       $('#login-status').html('Authenticating...').css('color', 'rgb(50,200,50)');
       console.log('Authenticating initiated...');
     } else if (status === Strophe.Status.AUTHFAIL) {
-      this.currentStatus = 4;
+      //this.currentStatus = 4;
       $('#login-status').html('Authentication failed').css('color', 'rgb(200,0,0)');
       console.log('Authentication failed.');
     } else if (status === Strophe.Status.CONNECTED) {
-      this.currentStatus = 5;
-      $('#login-status').html('Connected!').css('color', 'rgb(0,150,0)');
-      $('#user_login').html(this.connection.authcid);
-      $(document).trigger('connected');
+      console.log('Status 5 detected');
+      //this.currentStatus = 5;
+      console.log('Current state: ' + this.currentStatus);
+      console.log('Error: ' + error);
+      //$('#login-status').html('Connected!').css('color', 'rgb(0,150,0)');
+      //$('#user_login').html(this.connection.authcid);
+      Connector.onConnected(); // for some reason, this.onConnected(); is not working. weird?? [10/15/14]
     } else if (status === Strophe.Status.DISCONNECTING) {
-      this.currentStatus = 7;
+      //this.currentStatus = 7;
       $('#login-status').html('Disconnecting...').css('color', 'rgb(200,100,100)');
       console.log('Disconnecting initiated...');
     } else if (status === Strophe.Status.DISCONNECTED) {
-      this.currentStatus = 6;
+      //this.currentStatus = 6;
       $(document).trigger('disconnected');
       $('#login-status').html('Disconnected').css('color', 'rgb(200,0,0)');
       $('#attach-status').html('No');
       $('#user_login').html('no one');
       console.log('Disconnected.');
     } else if (status === Strophe.Status.ATTACHED) {
-      this.currentStatus = 8;
+      //this.currentStatus = 8;
       $('#attach-status').html('Yes');
       $('#login-status').html('Session').css('color', 'rgb(0,150,0)');
       $('#user_login').html(Strophe.getNodeFromJid(this.connection.jid));
@@ -60,6 +62,15 @@ var Connector = {
       this.connection.addHandler(this.onRosterChanged, "jabber:iq:roster", "iq", "set");
       console.log('Session attached.');
     }
+  },
+
+  onConnected: function() {
+    console.log('Connected.');
+    console.log(Connector.connection);
+
+    var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});
+    
+    Connector.connection.sendIQ(iq, Connector.onRoster);
   },
 
   // CHANGE THIS, THIS IS THE FRIENDS LIST (FOR KEYBOARD SHORTCUTS)
