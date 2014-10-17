@@ -9,6 +9,7 @@ console.log('connection.js loaded.');
 var Connector = {
 
   connection: null,
+  roster: {},
 
   convertJidToId: function (jid) {
     return Strophe.getBareJidFromJid(jid)
@@ -18,45 +19,23 @@ var Connector = {
 
   onConnect: function (status, error) {
     if (status === Strophe.Status.CONNECTING) {
-      //this.currentStatus = 1;  // Don't need this, can call Connector.connection.currenStatus instead.
-      $('#login-status').html('Connecting...').css('color', 'rgb(50,200,50)');
       console.log('Connecting initiated...');
     } else if (status === Strophe.Status.CONNFAIL) {
-      //this.currentStatus = 2;
-      $('#login-status').html('Connection failed').css('color', 'rgb(200,0,0)');
       console.log('Connection failed.');
     } else if (status === Strophe.Status.AUTHENTICATING) {
-      //this.currentStatus = 3;
-      $('#login-status').html('Authenticating...').css('color', 'rgb(50,200,50)');
       console.log('Authenticating initiated...');
     } else if (status === Strophe.Status.AUTHFAIL) {
-      //this.currentStatus = 4;
-      $('#login-status').html('Authentication failed').css('color', 'rgb(200,0,0)');
       console.log('Authentication failed.');
     } else if (status === Strophe.Status.CONNECTED) {
       console.log('Status 5 detected');
-      //this.currentStatus = 5;
       console.log('Current state: ' + this.currentStatus);
-      console.log('Error: ' + error);
-      //$('#login-status').html('Connected!').css('color', 'rgb(0,150,0)');
-      //$('#user_login').html(this.connection.authcid);
       Connector.onConnected(); // for some reason, this.onConnected(); is not working. weird?? [10/15/14]
     } else if (status === Strophe.Status.DISCONNECTING) {
-      //this.currentStatus = 7;
-      $('#login-status').html('Disconnecting...').css('color', 'rgb(200,100,100)');
       console.log('Disconnecting initiated...');
     } else if (status === Strophe.Status.DISCONNECTED) {
-      //this.currentStatus = 6;
-      $(document).trigger('disconnected');
-      $('#login-status').html('Disconnected').css('color', 'rgb(200,0,0)');
-      $('#attach-status').html('No');
-      $('#user_login').html('no one');
       console.log('Disconnected.');
+      Connector.onDisconnected(); // $(document).trigger('disconnected');
     } else if (status === Strophe.Status.ATTACHED) {
-      //this.currentStatus = 8;
-      $('#attach-status').html('Yes');
-      $('#login-status').html('Session').css('color', 'rgb(0,150,0)');
-      $('#user_login').html(Strophe.getNodeFromJid(this.connection.jid));
       var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});
       this.connection.sendIQ(iq, this.onRoster);
       this.connection.addHandler(this.onRosterChanged, "jabber:iq:roster", "iq", "set");
@@ -66,39 +45,53 @@ var Connector = {
 
   onConnected: function() {
     console.log('Connected.');
-    console.log(Connector.connection);
+    console.log(this.connection);
 
     var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});
     
-    Connector.connection.sendIQ(iq, Connector.onRoster);
+    this.connection.sendIQ(iq, this.onRoster);
   },
 
   // CHANGE THIS, THIS IS THE FRIENDS LIST (FOR KEYBOARD SHORTCUTS)
   onRoster: function (iq) {
+
+    console.log('onRoster triggered.');
+
     $(iq).find('item').each(function () {
+
+      //console.log('Item: ', this);
       var jid = $(this).attr('jid');
+      //console.log('Item JID: ' + jid);
       var name = $(this).attr('name') || jid;
+      //console.log('Item name: ' + name);
 
       // transform jid into an id
-      var jid_id = this.convertJidToId(jid);
+      var jidID = Connector.convertJidToId(jid);
+      //console.log('JID converted to ID: ' + jidID);
 
-      var contact = $("<li id='" + jid_id + "'>" +
-                    "<div class='roster-contact offline'>" +
-                    "<div class='roster-name text small'>" +
-                    name +
-                    "</div><div class='roster-jid hidden'>" +
-                    jid +
-                    "</div></div></li>");
+      Connector.roster[name] = { 'jid': jid, 'jidID': jidID }
 
-      this.insertContact(contact);
+      //console.log(contact);
+
+      //Connector.insertContact(contact);
     });
 
+    console.log(Connector.roster);
+
+    var viewsObject = chrome.extension.getViews();
+    console.log(viewsObject);
+
+    viewsObject[1].Options['roster'] = Connector.roster;
+
+    return;
+
     // set up presence handler and send initial presence
-    this.connection.addHandler(this.onPresence, null, "presence");
+    this.connection.addHandler(Connector.onPresence, null, "presence");
     this.connection.send($pres());
   },
 
   insertContact: function (elem) {
+    console.log('insertContact triggered.');
     var jid = elem.find('.roster-jid').text();
     var pres = this.presenceValue(elem.find('.roster-contact'));
     
@@ -215,28 +208,13 @@ var Connector = {
     return 0;
   },
 
-/* [DELETE] Don't need this, this is for session attachment (5/15/14)
-  storage: {
-    jid: null,
-    sid: null,
-    rid: null
-  },
+  onDisconnected: function () {
 
+    this.connection = null;
+    this.pendingSubscriber = null;
+    this.onConnect(); // previously I had this set to onConnect; (without parenthesis) FYI [10/16/14]
 
-  deleteStorage: function() {
-    chrome.storage.sync.remove([
-      'jid', 
-      'sid', 
-      'rid'
-    ], function() {
-      this.storage.jid = null;
-      this.storage.sid = null;
-      this.storage.rid = null;      
-      console.log('JID/SID/RID removed from chrome.storage');
-      console.log('this.storage JID: '+this.storage.jid+' and SID: '+this.storage.sid+' and RID: '+this.storage.rid);
-    });
   },
-*/
 
   // ==================== MESSAGE.JS PROPERTIES ==================== 
   onMessage: function (message) {

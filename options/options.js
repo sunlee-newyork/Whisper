@@ -146,6 +146,8 @@ var Options = {
 
 $(document).ready(function() {
 
+  $(window).name = 'optionsPage';
+
   // CHROME.STORAGE GET ALL SAVED PREFERENCES AND RESTORE \\
   chrome.storage.sync.get(function (result) {
 
@@ -406,4 +408,12 @@ $(document).bind('roster', function() {
     }
     $('#roster-area').fadeOut('fast');
   });
+});
+
+// [TEST FOR NOW, MAYBE DELETE??] [10/16/14] \\
+chrome.extension.onMessage.addListener(function (message, sender, sendResponse) {
+  if (message.type == 'roster') {
+    console.log('Connector roster: ', message.roster);
+    sendResponse({type: 'success'});
+  }
 });
