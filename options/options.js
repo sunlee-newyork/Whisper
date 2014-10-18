@@ -8,7 +8,11 @@
 
 var Options = {
 
-  status: null,
+  status: Number,
+
+  roster: {},
+
+  username: String,
 
   which_friend: null,
 
@@ -136,8 +140,58 @@ var Options = {
     setTimeout(function() {
       $('#save_message').fadeOut('slow');
     }, 1000);  
-  }
+  },
 
+  onRosterReceived: function (status, roster, username, callback) {
+    this.status = status;
+    this.roster = roster;
+    this.username = username;
+    console.log('Status received: ' + this.status);
+    console.log('Username received: ' + this.username);
+    console.log('Roster received:', this.roster);
+
+    callback();
+  },
+
+  handleConnection: function () {
+    console.log('handleConnection triggered.');
+    switch (Options.status) {
+      case 1: 
+        $('#login-status').html('Connecting...').css('color', 'rgb(50,200,50)');
+        console.log('Connecting initiated...');
+        break;
+      case 2:
+        $('#login-status').html('Connection failed').css('color', 'rgb(200,0,0)');
+        console.log('Connection failed.');
+        break;
+      case 3:
+        $('#login-status').html('Authenticating...').css('color', 'rgb(50,200,50)');
+        console.log('Authenticating initiated...');
+        break;
+      case 4:
+        $('#login-status').html('Authentication failed').css('color', 'rgb(200,0,0)');
+        console.log('Authentication failed.');
+        break;
+      case 5:
+        $('#login-status').html('Connected!').css('color', 'rgb(0,150,0)');
+        $('#user_login').html(Options.username);
+        break;
+      case 6:
+        $('#roster-area ul').empty();
+        $('#login-status').html('Disconnected').css('color', 'rgb(200,0,0)');
+        $('#attach-status').html('No');
+        $('#user_login').html('no one');
+        console.log('Disconnected.');
+        break;
+      case 7:
+        $('#login-status').html('Disconnecting...').css('color', 'rgb(200,100,100)');
+        console.log('Disconnecting initiated...');
+        break;
+      default:
+        console.log('No status received, something is wrong.');   
+    }
+  }
+ 
 }
 
 /* ======================================================================

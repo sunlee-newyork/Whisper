@@ -9,6 +9,7 @@ console.log('connection.js loaded.');
 var Connector = {
 
   connection: null,
+  status: null,
   roster: {},
 
   convertJidToId: function (jid) {
@@ -20,25 +21,33 @@ var Connector = {
   onConnect: function (status, error) {
     if (status === Strophe.Status.CONNECTING) {
       console.log('Connecting initiated...');
+      Connector.status = 1;
     } else if (status === Strophe.Status.CONNFAIL) {
       console.log('Connection failed.');
+      Connector.status = 2;
     } else if (status === Strophe.Status.AUTHENTICATING) {
       console.log('Authenticating initiated...');
+      Connector.status = 3;
     } else if (status === Strophe.Status.AUTHFAIL) {
       console.log('Authentication failed.');
+      Connector.status = 4;
     } else if (status === Strophe.Status.CONNECTED) {
       console.log('Status 5 detected');
       console.log('Current state: ' + this.currentStatus);
+      Connector.status = 5;
       Connector.onConnected(); // for some reason, this.onConnected(); is not working. weird?? [10/15/14]
     } else if (status === Strophe.Status.DISCONNECTING) {
       console.log('Disconnecting initiated...');
+      Connector.status = 7;
     } else if (status === Strophe.Status.DISCONNECTED) {
       console.log('Disconnected.');
+      Connector.status = 6;
       Connector.onDisconnected(); // $(document).trigger('disconnected');
     } else if (status === Strophe.Status.ATTACHED) {
+      this.status = 8;
       var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});
-      this.connection.sendIQ(iq, this.onRoster);
-      this.connection.addHandler(this.onRosterChanged, "jabber:iq:roster", "iq", "set");
+      Connector.connection.sendIQ(iq, this.onRoster);
+      Connector.connection.addHandler(this.onRosterChanged, "jabber:iq:roster", "iq", "set");
       console.log('Session attached.');
     }
   },
@@ -81,7 +90,12 @@ var Connector = {
     var viewsObject = chrome.extension.getViews();
     console.log(viewsObject);
 
-    viewsObject[1].Options['roster'] = Connector.roster;
+    //viewsObject[1].Options['roster'] = Connector.roster;
+    //viewsObject[1].Options['status'] = Connector.status;
+    viewsObject[1].Options.onRosterReceived(Connector.status, Connector.roster, Connector.connection.authcid, function () {
+      viewsObject[1].Options.handleConnection();
+    });
+
 
     return;
 
