@@ -19,12 +19,16 @@ var Connector = {
   },
 
   onConnect: function (status, error) {
+    // Get all pages except the background page [10/17/14]
+    //Connector.views = chrome.extension.getViews();
+
     if (status === Strophe.Status.CONNECTING) {
       console.log('Connecting initiated...');
       Connector.status = 1;
     } else if (status === Strophe.Status.CONNFAIL) {
       console.log('Connection failed.');
       Connector.status = 2;
+      //Connector.sendStatus();
     } else if (status === Strophe.Status.AUTHENTICATING) {
       console.log('Authenticating initiated...');
       Connector.status = 3;
@@ -32,10 +36,12 @@ var Connector = {
       console.log('Authentication failed.');
       Connector.status = 4;
     } else if (status === Strophe.Status.CONNECTED) {
-      console.log('Status 5 detected');
-      console.log('Current state: ' + this.currentStatus);
+      console.log('Connected.');
       Connector.status = 5;
-      Connector.onConnected(); // for some reason, this.onConnected(); is not working. weird?? [10/15/14]
+      Connector.onConnected();
+      //Connector.sendStatus(); // for some reason, this.onConnected(); is not working. weird?? [10/15/14]
+      var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});      
+      Connector.connection.sendIQ(iq, Connector.onRoster);
     } else if (status === Strophe.Status.DISCONNECTING) {
       console.log('Disconnecting initiated...');
       Connector.status = 7;
@@ -50,15 +56,22 @@ var Connector = {
       Connector.connection.addHandler(this.onRosterChanged, "jabber:iq:roster", "iq", "set");
       console.log('Session attached.');
     }
+
+    Connector.sendStatus();
   },
 
-  onConnected: function() {
-    console.log('Connected.');
-    console.log(this.connection);
+  sendStatus: function () {
+    var views = chrome.extension.getViews();
 
-    var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});
-    
-    this.connection.sendIQ(iq, this.onRoster);
+    views[1].Options.onStatusReceived(Connector.status, function () {
+      views[1].Options.handleStatus();
+    });
+  },
+
+  onConnected: function () {
+    var views = chrome.extension.getViews();
+
+    views[1].Options.onConnectReceived(Connector.connection.authcid);
   },
 
   // CHANGE THIS, THIS IS THE FRIENDS LIST (FOR KEYBOARD SHORTCUTS)
@@ -67,36 +80,24 @@ var Connector = {
     console.log('onRoster triggered.');
 
     $(iq).find('item').each(function () {
-
-      //console.log('Item: ', this);
       var jid = $(this).attr('jid');
-      //console.log('Item JID: ' + jid);
       var name = $(this).attr('name') || jid;
-      //console.log('Item name: ' + name);
-
       // transform jid into an id
       var jidID = Connector.convertJidToId(jid);
-      //console.log('JID converted to ID: ' + jidID);
 
+      // Build the Roster object to ship to options.js [10/17/14]
       Connector.roster[name] = { 'jid': jid, 'jidID': jidID }
-
-      //console.log(contact);
-
-      //Connector.insertContact(contact);
     });
 
     console.log(Connector.roster);
 
-    var viewsObject = chrome.extension.getViews();
-    console.log(viewsObject);
+    var views = chrome.extension.getViews();
 
-    //viewsObject[1].Options['roster'] = Connector.roster;
-    //viewsObject[1].Options['status'] = Connector.status;
-    viewsObject[1].Options.onRosterReceived(Connector.status, Connector.roster, Connector.connection.authcid, function () {
-      viewsObject[1].Options.handleConnection();
+    views[1].Options.onRosterReceived(Connector.roster, function () {
+      console.log('Roster received: ', Options.roster);
     });
 
-
+    // Working up until this point. Remove 'return' later when ready to continue [10/18/14]
     return;
 
     // set up presence handler and send initial presence

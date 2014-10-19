@@ -31,7 +31,6 @@ chrome.browserAction.onClicked.addListener(function(tab) {
   openOrFocusOptionsPage();
 });
 
-
 /* ======================================================================
 =                           BACKGROUND OBJECT                           =
 ====================================================================== */
@@ -44,11 +43,7 @@ var Handler = {
   login: function(user, pass) {
     Connector.connection = new Strophe.Connection('http://0.0.0.0:5280/http-bind/');
 
-    console.log('Connector.connection after "connect" trigger: ', Connector.connection);
-
     Connector.connection.connect(user+'@chat.facebook.com', pass, Connector.onConnect);
-    console.log('Connector.connection after connect is called: ', Connector.connection);
-
   }
 
 }

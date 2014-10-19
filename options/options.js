@@ -142,18 +142,25 @@ var Options = {
     }, 1000);  
   },
 
-  onRosterReceived: function (status, roster, username, callback) {
+  onStatusReceived: function (status, callback) {
     this.status = status;
-    this.roster = roster;
-    this.username = username;
     console.log('Status received: ' + this.status);
-    console.log('Username received: ' + this.username);
-    console.log('Roster received:', this.roster);
 
     callback();
   },
 
-  handleConnection: function () {
+  onConnectReceived: function (username) {
+    this.username = username;
+    $('#user_login').html(this.username);
+  },
+
+  onRosterReceived: function (roster, callback) {
+    this.roster = roster;
+
+    callback();
+  },
+
+  handleStatus: function () {
     console.log('handleConnection triggered.');
     switch (Options.status) {
       case 1: 
@@ -174,7 +181,6 @@ var Options = {
         break;
       case 5:
         $('#login-status').html('Connected!').css('color', 'rgb(0,150,0)');
-        $('#user_login').html(Options.username);
         break;
       case 6:
         $('#roster-area ul').empty();
@@ -341,8 +347,8 @@ $(document).ready(function() {
 
     bg.Handler.login($('#username').val().toLowerCase(), $('#password').val().toLowerCase());
 
-    $('#username').val('');
-    $('#password').val('');
+    //$('#username').val('');
+    //$('#password').val('');
   });
 
   // [ADD] Send disconnect message to background.js (5/15/14)
@@ -367,7 +373,10 @@ $(document).ready(function() {
 
     // [ADDED] conditional to see if user is already logged in (5/6/14)
     if (Options.status === 5) {
-      $('#roster-area').show();
+
+      $('.container').width(975);
+      $('#roster-area').removeClass('hidden');
+
       var currentElement = $(this)[0];
       console.log(currentElement);
       var clicked = $(this)[0].id;
@@ -418,6 +427,12 @@ $(document).ready(function() {
 /* ======================================================================
 =                        OPTIONS DOM EVENT BINDS                        =
 ====================================================================== */
+
+
+// ------------ BUILD ROSTER SEARCH ENGINE HERE [10/18/14] ----------- \\
+//.....................................................................\\
+// ------------------------------------------------------------------- \\
+
 
 // ROSTER LOADED EVENT LISTENER \\
 $(document).bind('roster', function() {
