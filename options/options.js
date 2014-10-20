@@ -10,8 +10,6 @@ var Options = {
 
   status: Number,
 
-  roster: {},
-
   username: String,
 
   which_friend: null,
@@ -155,9 +153,14 @@ var Options = {
   },
 
   onRosterReceived: function (roster, callback) {
-    this.roster = roster;
+    this['roster'] = roster;
 
     callback();
+  },
+
+  onDisconnectReceived: function () {
+    $('#roster-area').addClass('hidden');
+    $('.container').width(725);
   },
 
   handleStatus: function () {
@@ -205,8 +208,6 @@ var Options = {
 ====================================================================== */
 
 $(document).ready(function() {
-
-  $(window).name = 'optionsPage';
 
   // CHROME.STORAGE GET ALL SAVED PREFERENCES AND RESTORE \\
   chrome.storage.sync.get(function (result) {
@@ -366,7 +367,6 @@ $(document).ready(function() {
 
   // ******* NEW LOGIN CLICK LISTENER [10/12/14] ********* \\
 
-
   // FRIEND_LINK CLICKS LISTENER \\
   $('.friend_link').click(function() {
     console.log('.friend_link click detected.');
@@ -375,12 +375,17 @@ $(document).ready(function() {
     if (Options.status === 5) {
 
       $('.container').width(975);
-      $('#roster-area').removeClass('hidden');
+
+      setTimeout(function () {
+        $('#roster-area').removeClass('hidden');    
+      }, 1000);
 
       var currentElement = $(this)[0];
       console.log(currentElement);
+
       var clicked = $(this)[0].id;
       console.log('Clicked ID: '+clicked);
+
       switch(clicked) {
         case 'first_link': Options.which_friend = 'first';
           break;
@@ -393,10 +398,13 @@ $(document).ready(function() {
         case 'fifth_link': Options.which_friend = 'fifth';
           break;
       }
+
       console.log('Options.which_friend: '+Options.which_friend);
+
       $(document).trigger('roster', function() {
         console.log('Roster event triggered.');
       });  
+
     } else { // Else show the 'Login first!' message alert
       $('#roster-alert').show(function() {
         setTimeout(function() {
@@ -422,17 +430,45 @@ $(document).ready(function() {
     Options.onSaved();
   });
 
+  // ROSTER SEARCH ENGINE LISTENER [10/19/14] \\
+  $('#roster_searchbar').keyup(function () {
+
+    console.log('Keyup detected.');
+
+    if ($(this).val().length > 0) {
+
+      var rosterList = Options.roster.filter(function (rosterItem) {
+
+        return rosterItem.name.toLowerCase().indexOf($('#roster_searchbar').val().toLowerCase()) != -1;
+
+      });
+
+      console.log('Matching roster items: ', rosterList);
+
+      $('.roster-list').empty();
+
+      for (var i = 0; i < rosterList.length; i++) {
+        $('.roster-list').append("<li class='roster-contact' data-jidID='"+rosterList[i].jidID+"'>"+rosterList[i].name+"</li>");
+      }
+    } else {
+
+      $('.roster-list').empty();
+
+    }
+
+    //var letter = $('#roster_input').val();
+
+    // Loop through Roster object and search for any name that contains 'letter' [10/19/14]
+    //for (var x in Options.roster) {
+    //  if ()
+    //}
+  });
+
 });
 
 /* ======================================================================
 =                        OPTIONS DOM EVENT BINDS                        =
 ====================================================================== */
-
-
-// ------------ BUILD ROSTER SEARCH ENGINE HERE [10/18/14] ----------- \\
-//.....................................................................\\
-// ------------------------------------------------------------------- \\
-
 
 // ROSTER LOADED EVENT LISTENER \\
 $(document).bind('roster', function() {

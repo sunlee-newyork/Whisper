@@ -10,7 +10,7 @@ var Connector = {
 
   connection: null,
   status: null,
-  roster: {},
+  roster: [],
 
   convertJidToId: function (jid) {
     return Strophe.getBareJidFromJid(jid)
@@ -79,24 +79,29 @@ var Connector = {
 
     console.log('onRoster triggered.');
 
-    $(iq).find('item').each(function () {
-      var jid = $(this).attr('jid');
-      var name = $(this).attr('name') || jid;
-      // transform jid into an id
-      var jidID = Connector.convertJidToId(jid);
+    if (Connector.roster.length < 1) {
+      $(iq).find('item').each(function () {
+        var jid = $(this).attr('jid');
+        var name = $(this).attr('name') || jid;
+        // transform jid into an id
+        var jidID = Connector.convertJidToId(jid);
 
-      // Build the Roster object to ship to options.js [10/17/14]
-      Connector.roster[name] = { 'jid': jid, 'jidID': jidID }
-    });
+        // Build the Roster object to ship to options.js [10/17/14]
+        Connector.roster.push({ 'name': name, 'jid': jid, 'jidID': jidID });
+      });
 
-    console.log(Connector.roster);
-
+      console.log(Connector.roster);  
+    }
+    
     var views = chrome.extension.getViews();
 
-    views[1].Options.onRosterReceived(Connector.roster, function () {
-      console.log('Roster received: ', Options.roster);
-    });
+    if (!views[1].Options.roster) {
+      views[1].Options.onRosterReceived(Connector.roster, function () {
+        console.log('Roster received: ', Options.roster);
+      });
+    }
 
+    
     // Working up until this point. Remove 'return' later when ready to continue [10/18/14]
     return;
 
@@ -227,7 +232,10 @@ var Connector = {
 
     this.connection = null;
     this.pendingSubscriber = null;
-    this.onConnect(); // previously I had this set to onConnect; (without parenthesis) FYI [10/16/14]
+
+    var views = chrome.extension.getViews();
+
+    views[1].Options.onDisconnectReceived();
 
   },
 
