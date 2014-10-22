@@ -162,22 +162,35 @@ a:active {
 .roster {
 	position: relative;
 	float: right;
-	width: 200px;
-	height: 100%;
-	margin: 25px 0;
+	width: 175px;
+	margin: 25px 0 0 0;
+	padding: 0 2px;
 	overflow: auto;
 }
 
 #roster-area ul {
 	list-style-type:none;
-	padding:0;
+	padding: 0;
 	margin-left:0;
+	text-align: right;
+}
+
+.roster-list-wrapper {
+	width: 100%;
+	height: 645px;
+	overflow: auto;
+}
+
+.roster-contact {
+	color: rgb(30,100,255);
+	padding: 0 15px 0 0;
 }
 
 .roster-contact:hover {
-	background-color: #aaa;
+	background-color: rgb(30,100,255);
   color: white;
   cursor:pointer;
+  border-radius: 5px;
 }
 
 .roster_title {

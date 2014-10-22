@@ -87,8 +87,8 @@ var Options = {
 
         // *** IF FRIENDS OPTION *** \\
         if (friendJid) {
-          optionsPlaceholder[option]['friendJid'] = this[friend_jid];
-          optionsPlaceholder[option]['friendName'] = this[friend_name];
+          optionsPlaceholder[option]['friendJid'] = Options[friendJid];
+          optionsPlaceholder[option]['friendName'] = Options[friendName];
         }
 
         /* This gets prompted even when checkbox is not checked. Need to get back to this.
@@ -161,6 +161,7 @@ var Options = {
   onDisconnectReceived: function () {
     $('#roster-area').addClass('hidden');
     $('.container').width(725);
+    $('#roster_searchbar').val('');
   },
 
   handleStatus: function () {
@@ -374,7 +375,7 @@ $(document).ready(function() {
     // [ADDED] conditional to see if user is already logged in (5/6/14)
     if (Options.status === 5) {
 
-      $('.container').width(975);
+      $('.container').width(950);
 
       setTimeout(function () {
         $('#roster-area').removeClass('hidden');    
@@ -401,10 +402,12 @@ $(document).ready(function() {
 
       console.log('Options.which_friend: '+Options.which_friend);
 
+      /*
       $(document).trigger('roster', function() {
         console.log('Roster event triggered.');
-      });  
-
+      }); 
+      */
+      
     } else { // Else show the 'Login first!' message alert
       $('#roster-alert').show(function() {
         setTimeout(function() {
@@ -413,6 +416,10 @@ $(document).ready(function() {
       });
     }
     
+  });
+
+  $('.roster-contact').on('click', function() {
+    console.log('Roster contact clicked.');
   });
 
   // OPTIONS SAVE CLICK LISTENER \\
@@ -430,7 +437,7 @@ $(document).ready(function() {
     Options.onSaved();
   });
 
-  // ROSTER SEARCH ENGINE LISTENER [10/19/14] \\
+  // ROSTER SEARCH ENGINE INPUT LISTENER [10/19/14] \\
   $('#roster_searchbar').keyup(function () {
 
     console.log('Keyup detected.');
@@ -448,77 +455,58 @@ $(document).ready(function() {
       $('.roster-list').empty();
 
       for (var i = 0; i < rosterList.length; i++) {
-        $('.roster-list').append("<li class='roster-contact' data-jidID='"+rosterList[i].jidID+"'>"+rosterList[i].name+"</li>");
+        $('.roster-list').append("<li class='roster-contact' data-jid='"+rosterList[i].jid+"' data-jidID='"+rosterList[i].jidID+"'>"+rosterList[i].name+"</li>");
       }
-    } else {
 
-      $('.roster-list').empty();
+      // ROSTER CONTACT SELECTION LISTENER [10/21/14] \\
+      $('.roster-contact').click(function () {
+        console.log('.roster-contact click detected.');
 
+        var jid = $(this).data('jid');
+        console.log('.roster-contact JID: '+jid);
+        
+        var name = $(this).text();
+        console.log('.roster-contact NAME: '+name);
+        
+        switch(Options.which_friend) {
+          case 'first':
+            Options.first_jid = jid;
+            Options.first_name = name;
+            console.log('Options.first_jid: '+Options.first_jid+' and name: '+Options.first_name);
+            $('#first_link').html(Options.first_name+' (click to change)');
+            break;
+          case 'second':
+            Options.second_jid = jid;
+            Options.second_name = name;
+            console.log('Options.second_jid: '+Options.second_jid+' and name: '+Options.second_name);
+            $('#second_link').html(Options.second_name+' (click to change)');
+            break;
+          case 'third':
+            Options.third_jid = jid;
+            Options.third_name = name;
+            console.log('Options.first_jid: '+Options.third_jid+' and name: '+Options.third_name);
+            $('#third_link').html(Options.third_name+' (click to change)');
+            break;
+          case 'fourth':
+            Options.fourth_jid = jid;
+            Options.fourth_name = name;
+            console.log('Options.fourth_jid: '+Options.fourth_jid+' and name: '+Options.fourth_name);
+            $('#fourth_link').html(Options.fourth_name+' (click to change)');
+            break; 
+          case 'fifth':
+            Options.fifth_jid = jid;
+            Options.fifth_name = name;
+            console.log('Options.fifth_jid: '+Options.fifth_jid+' and name: '+Options.fifth_name);
+            $('#fifth_link').html(Options.fifth_name+' (click to change)');
+            break;
+        }
+        
+        $('#roster-area').addClass('hidden');
+        $('.container').width(725);
+      });
     }
 
-    //var letter = $('#roster_input').val();
-
-    // Loop through Roster object and search for any name that contains 'letter' [10/19/14]
-    //for (var x in Options.roster) {
-    //  if ()
-    //}
+    else { $('.roster-list').empty(); }
   });
 
-});
-
-/* ======================================================================
-=                        OPTIONS DOM EVENT BINDS                        =
-====================================================================== */
-
-// ROSTER LOADED EVENT LISTENER \\
-$(document).bind('roster', function() {
-  $('.roster-contact').on('click', function() {
-    console.log('.roster-contact click detected.');
-    var jid = $(this).find(".roster-jid").text();
-    console.log('.roster-contact JID: '+jid);
-    var name = $(this).find(".roster-name").text();
-    console.log('.roster-contact NAME: '+name);
-    
-    switch(Options.which_friend) {
-      case 'first':
-        Options.first_jid = jid;
-        Options.first_name = name;
-        console.log('Options.first_jid: '+Options.first_jid+' and name: '+Options.first_name);
-        $('#first_link').html(Options.first_name+' (click to change)');
-        break;
-      case 'second':
-        Options.second_jid = jid;
-        Options.second_name = name;
-        console.log('Options.second_jid: '+Options.second_jid+' and name: '+Options.second_name);
-        $('#second_link').html(Options.second_name+' (click to change)');
-        break;
-      case 'third':
-        Options.third_jid = jid;
-        Options.third_name = name;
-        console.log('Options.first_jid: '+Options.third_jid+' and name: '+Options.third_name);
-        $('#third_link').html(Options.third_name+' (click to change)');
-        break;
-      case 'fourth':
-        Options.fourth_jid = jid;
-        Options.fourth_name = name;
-        console.log('Options.fourth_jid: '+Options.fourth_jid+' and name: '+Options.fourth_name);
-        $('#fourth_link').html(Options.fourth_name+' (click to change)');
-        break; 
-      case 'fifth':
-        Options.fifth_jid = jid;
-        Options.fifth_name = name;
-        console.log('Options.fifth_jid: '+Options.fifth_jid+' and name: '+Options.fifth_name);
-        $('#fifth_link').html(Options.fifth_name+' (click to change)');
-        break;
-    }
-    $('#roster-area').fadeOut('fast');
-  });
-});
-
-// [TEST FOR NOW, MAYBE DELETE??] [10/16/14] \\
-chrome.extension.onMessage.addListener(function (message, sender, sendResponse) {
-  if (message.type == 'roster') {
-    console.log('Connector roster: ', message.roster);
-    sendResponse({type: 'success'});
-  }
 });
