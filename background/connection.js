@@ -12,12 +12,6 @@ var Connector = {
   status: null,
   roster: [],
 
-  convertJidToId: function (jid) {
-    return Strophe.getBareJidFromJid(jid)
-      .replace(/@/g, "-")
-      .replace(/\./g, "-");
-  },
-
   onConnect: function (status, error) {
     // Get all pages except the background page [10/17/14]
     //Connector.views = chrome.extension.getViews();
@@ -42,6 +36,21 @@ var Connector = {
       //Connector.sendStatus(); // for some reason, this.onConnected(); is not working. weird?? [10/15/14]
       var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});      
       Connector.connection.sendIQ(iq, Connector.onRoster);
+      var rosterHandler = Connector.connection.addHandler(Connector.onRosterChanged, "jabber:iq:roster", "iq", "set");
+      console.log('Roster handler return value: ', rosterHandler);
+      var messageHandler = Connector.connection.addHandler(Message.onMessageReceived, null, "message", "chat");
+      console.log('Message handler return value: ', messageHandler);
+
+      // Send connection status to all tabs [10/28/14]
+      chrome.tabs.query({}, function(tabs) {
+        for (var i=0; i<tabs.length; ++i) {
+          chrome.tabs.sendMessage(tabs[i].id, {
+            type: 'connection',
+            status: Connector.status
+          });
+        }
+      });
+
     } else if (status === Strophe.Status.DISCONNECTING) {
       console.log('Disconnecting initiated...');
       Connector.status = 7;
@@ -53,25 +62,28 @@ var Connector = {
       this.status = 8;
       var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});
       Connector.connection.sendIQ(iq, this.onRoster);
-      Connector.connection.addHandler(this.onRosterChanged, "jabber:iq:roster", "iq", "set");
+      Connector.connection.addHandler(Connector.onRosterChanged, "jabber:iq:roster", "iq", "set");
       console.log('Session attached.');
     }
 
     Connector.sendStatus();
   },
 
-  sendStatus: function () {
-    var views = chrome.extension.getViews();
-
-    views[1].Options.onStatusReceived(Connector.status, function () {
-      views[1].Options.handleStatus();
-    });
-  },
-
   onConnected: function () {
     var views = chrome.extension.getViews();
 
     views[1].Options.onConnectReceived(Connector.connection.authcid);
+  },
+
+  onDisconnected: function () {
+
+    this.connection = null;
+    this.pendingSubscriber = null;
+
+    var views = chrome.extension.getViews();
+
+    views[1].Options.onDisconnectReceived();
+
   },
 
   // CHANGE THIS, THIS IS THE FRIENDS LIST (FOR KEYBOARD SHORTCUTS)
@@ -84,7 +96,7 @@ var Connector = {
         var jid = $(this).attr('jid');
         var name = $(this).attr('name') || jid;
         // transform jid into an id
-        var jidID = Connector.convertJidToId(jid);
+        var jidID = Handler.convertJidToId(jid);
 
         // Build the Roster object to ship to options.js [10/17/14]
         Connector.roster.push({ 'name': name, 'jid': jid, 'jidID': jidID });
@@ -108,6 +120,47 @@ var Connector = {
     // set up presence handler and send initial presence
     this.connection.addHandler(Connector.onPresence, null, "presence");
     this.connection.send($pres());
+  },
+
+  onRosterChanged: function (iq) {
+    $(iq).find('item').each(function () {
+      var sub = $(this).attr('subscription');
+      var jid = $(this).attr('jid');
+      var name = $(this).attr('name') || jid;
+      var jid_id = Handler.convertJidToId(jid);
+
+      if (sub === 'remove') {
+        // contact is being removed
+        $('#' + jid_id).remove();
+      } else {
+        // contact is being added or modified
+        var contact_html = "<li id='" + jid_id + "'>" +
+                           "<div class='" + 
+                           ($('#' + jid_id).attr('class') || "roster-contact offline") +
+                           "'>" +
+                           "<div class='roster-name text small'>" +
+                           name +
+                           "</div><div class='roster-jid'>" +
+                           jid +
+                           "</div></div></li>";
+
+        if ($('#' + jid_id).length > 0) {
+          $('#' + jid_id).replaceWith(contact_html);
+        } else {
+          this.insertContact($(contact_html));
+        }
+      }
+    });
+
+    return true;
+  },
+
+  sendStatus: function () {
+    var views = chrome.extension.getViews();
+
+    views[1].Options.onStatusReceived(Connector.status, function () {
+      views[1].Options.handleStatus();
+    });
   },
 
   insertContact: function (elem) {
@@ -150,7 +203,7 @@ var Connector = {
   onPresence: function (presence) {
     var ptype = $(presence).attr('type');
     var from = $(presence).attr('from');
-    var jid_id = this.convertJidToId(from);
+    var jid_id = Handler.convertJidToId(from);
 
     if (ptype === 'subscribe') {
       // populate pendingSubscriber, the approve-jid span, and open the dialog
@@ -179,41 +232,8 @@ var Connector = {
     }
 
     // reset addressing for user since their presence changed
-    var jid_id = this.convertJidToId(from);
+    var jid_id = Handler.convertJidToId(from);
     $('#chat-' + jid_id).data('jid', Strophe.getBareJidFromJid(from));
-
-    return true;
-  },
-
-  onRosterChanged: function (iq) {
-    $(iq).find('item').each(function () {
-      var sub = $(this).attr('subscription');
-      var jid = $(this).attr('jid');
-      var name = $(this).attr('name') || jid;
-      var jid_id = this.convertJidToId(jid);
-
-      if (sub === 'remove') {
-        // contact is being removed
-        $('#' + jid_id).remove();
-      } else {
-        // contact is being added or modified
-        var contact_html = "<li id='" + jid_id + "'>" +
-                           "<div class='" + 
-                           ($('#' + jid_id).attr('class') || "roster-contact offline") +
-                           "'>" +
-                           "<div class='roster-name text small'>" +
-                           name +
-                           "</div><div class='roster-jid'>" +
-                           jid +
-                           "</div></div></li>";
-
-        if ($('#' + jid_id).length > 0) {
-          $('#' + jid_id).replaceWith(contact_html);
-        } else {
-          this.insertContact($(contact_html));
-        }
-      }
-    });
 
     return true;
   },
@@ -226,147 +246,6 @@ var Connector = {
     }
 
     return 0;
-  },
-
-  onDisconnected: function () {
-
-    this.connection = null;
-    this.pendingSubscriber = null;
-
-    var views = chrome.extension.getViews();
-
-    views[1].Options.onDisconnectReceived();
-
-  },
-
-  // ==================== MESSAGE.JS PROPERTIES ==================== 
-  onMessage: function (message) {
-    // [DELETE] $("#whisper_incoming").fadeIn('fast'); (5/6/14)
-    console.log('Message triggered: ', message);
-    var full_jid = $(message).attr('from');
-    console.log(full_jid);
-    var jid = Strophe.getBareJidFromJid(full_jid);
-    console.log(jid);
-    var jid_id = this.convertJidToId(jid);
-    console.log(jid_id);
-
-    // IF CHAT BOX FOR SPECIFIED JID DOESN'T EXIST YET, MAKE ONE
-    if ($('#chat-'+jid_id).length === 0) {
-      // add person div to master chat div
-      var personDiv = '<div id="chat-'+jid_id+'" class="chat-div"></div>';
-      $('#chat-'+jid_id).css({ "position": "absolute", "bottom": "0", "left": "0" });
-      console.log('Person div: '+personDiv);
-
-      $('body').append(personDiv);
-      // [DELETE?] $('#whisper_incoming').append(personDiv); (5/6/14)
-      // [DELETE?] $('#chat-'+jid_id).fadeIn('fast'); (5/6/14)
-
-      console.log('#chat-jid_id triggered.');
-    }
-
-    // give full_jid data to person div
-    $('#chat-'+jid_id).data('jid', full_jid);
-    console.log('jid data attached to #chat-jid_id');
-    console.log($('#chat-'+jid_id).data('jid'));
-
-    // ADD "TYPING..." FUNCTIONALITY
-    var composing = $(message).find('composing');
-    // if composing exists...
-    if (composing.length > 0) {
-      console.log('Composing triggered.');
-      // add the "is typing..." div
-      $('#chat-'+jid_id).append(
-        '<div class="chat-event whisper-text">' +
-        Strophe.getNodeFromJid(jid) + //This is where the first/last name will go
-        ' is typing...</div>'
-      );
-      $('#chat-'+jid_id).fadeIn('fast');
-      // make person div scrollable
-      this.scrollChat(jid_id);
-    }
-
-    // FIND THE MESSAGE TEXT AND ADD TO MESSAGE DIV
-    var body = $(message).find("html > body");
-
-    // IF there is no body
-    if (body.length === 0) {
-      console.log('Body not found.');
-      body = $(message).find('body');
-      if (body.length > 0) {
-        // get message text
-        body = body.text();
-        console.log('First Body: '+body);
-      } else { // otherwise there is no message, set body to null
-        body = null;
-      }
-    } else {
-      body = body.contents();
-      console.log('Second Body: '+body);
-
-      // MAKE SPAN OUT OF MESSAGE TEXT
-      var span = $("<span></span>");
-      body.each(function() {
-        if (document.importNode) {
-          $(document.importNode(this, true)).appendTo(span);
-        } else {
-          // IE workaround
-          span.append(this.xml);
-        }
-      });
-      body = span;
-      console.log('Third Body: '+body);
-    }
-
-    // IF MESSAGE EXISTS
-    if (body) {
-      console.log('Body exists.');
-      // remove notifications since user is now active
-      $('#chat-'+jid_id+' .chat-event').remove();
-      console.log('.chat-event removed.');
-
-      // add the new message wrappers
-      $('#chat-'+jid_id).append(
-        '<div class="chat-message whisper-text">' +
-        Strophe.getNodeFromJid(jid) +
-        ': <span class="chat-text"></span>' +
-        '</div>'
-      );
-      console.log('.chat-message and .chat-text appended.');
-
-      // add the actual new message text
-      $('#chat-'+jid_id+' .chat-message:last .chat-text').append(body);
-      console.log('Body appended to #chat-text.');
-      $('#chat-'+jid_id).fadeIn('fast');
-
-      this.scrollChat(jid_id);
-    }
-
-    // Incoming message fadeout detect
-    if (this.fadeout !== null) {
-      var fadeout = setTimeout(function() {
-        $("#chat-"+jid_id).fadeOut('slow');
-      }, this.fadeout);  
-    }
-
-    $('#chat-'+jid_id).click(function() {
-      if (fadeout) {
-        clearTimeout(fadeout);  
-      }
-    });
-
-    return true;
-  },
-
-  scrollChat: function (jid_id) {
-    // ORIGINAL Whisper \\
-    var height = $('#chat-'+jid_id).scrollHeight;
-    $('#chat-'+jid_id).scrollTop(height);
-
-    // MINE - VERSION 1 \\
-    // $('#chat-'+jid_id+' :last-child').focus();
-
-    // MINE - VERSION 2 \\
-    // $('chat-'+jid_id).lastChild.focus();
   },
 
   storage: {

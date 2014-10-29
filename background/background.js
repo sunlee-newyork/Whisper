@@ -32,7 +32,7 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 });
 
 /* ======================================================================
-=                           BACKGROUND OBJECT                           =
+=                             HANDLER OBJECT                            =
 ====================================================================== */
 
 // [ADDED] Options page connection event listener (5/9/14)
@@ -44,6 +44,12 @@ var Handler = {
     Connector.connection = new Strophe.Connection('http://0.0.0.0:5280/http-bind/');
 
     Connector.connection.connect(user+'@chat.facebook.com', pass, Connector.onConnect);
+  },
+
+  convertJidToId: function (jid) {
+    return Strophe.getBareJidFromJid(jid)
+      .replace(/@/g, "-")
+      .replace(/\./g, "-");
   }
 
 }

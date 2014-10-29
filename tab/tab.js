@@ -1,51 +1,138 @@
 // INJECT OUTGOING CHAT BOX DIV
-var outgoingDiv = "<div id='whisper_outgoing'></div>";
+var outgoingDiv = "<div id='whisper_outgoing'><input id='outgoing' /></div>";
 $('body').append(outgoingDiv);
-
-var inputBox = "<input id='outgoing' />";
-$('#whisper_outgoing').append(inputBox);
-
 
 $(document).ready(function() {
 
-  // GET FROM sessionStorage JID/SID/RID
-  Whisper.storage.jid = sessionStorage.getItem('jid');
-  Whisper.storage.sid = sessionStorage.getItem('sid');
-  Whisper.storage.rid = sessionStorage.getItem('rid');
+  chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
-  // IF JID/SID/RID are set...
-  if (Whisper.storage.jid && Whisper.storage.sid && Whisper.storage.rid) {
-    // Console.log outputs
-    console.log('sessionStorage JID/SID/RID detected.');
-    console.log('JID/SID/RID retrieved from sessionStorage.');
-    console.log('sessionStorage JID: '+Whisper.storage.jid+' and SID: '+Whisper.storage.sid+' and RID: '+Whisper.storage.rid);
+    // ******* MESSAGE RECEIVER ******* \\
+    if (request.type == "message") {
 
-    // Trigger attach with outputs
-    $(document).trigger('attach', Whisper.storage); 
-  } else { // ELSE if JID/SID/RID are not set...
-    console.log('JID/SID/RID not found.');
-    console.log('sessionStorage JID: '+Whisper.storage.jid+' and SID: '+Whisper.storage.sid+' and RID: '+Whisper.storage.rid);
-    // [ADDED] Get login info from background page (5/9/14)
-    chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-      if (request) {
-        console.log(request);
-        Whisper.loginStorage.jid_master = request.jid;
-        Whisper.loginStorage.pass_master = request.pass;
-        console.log('JID_Master/PASS_Master retrieved from background page.');
-        console.log('Whisper.loginStorage JID_Master: '+Whisper.loginStorage.jid_master+' and PASS_Master: '+Whisper.loginStorage.pass_master);
-        if (Whisper.loginStorage.jid_master && Whisper.loginStorage.pass_master) {
-          // Console.log outputs
-          console.log('No sessionStorage detected. (Connecting)');
-          // Trigger connect with outputs
-          $(document).trigger('connect', Whisper.loginStorage);
-        } else {
-          console.log('No background page login info detected. Action stopped.');
+      console.log('Received message packet from message.js: ', request);
+      // ******************************************************************** \\
+      // ******* EVERYTHING BELOW SHOULD BE HANDLED BY CONTENT SCRIPT ******* \\
+      // ******************************************************************** \\
+
+      // IF CHAT BOX FOR SPECIFIED JID DOESN'T EXIST YET, MAKE ONE
+      if ($('#chat-'+jidID).length === 0) {
+        // add person div to master chat div
+        var personDiv = '<div id="chat-'+jidID+'" class="chat-div"></div>';
+        $('#chat-'+jidID).css({ "position": "absolute", "bottom": "0", "left": "0" });
+        console.log('Person div: '+personDiv);
+
+        $('body').append(personDiv);
+        // [DELETE?] $('#whisper_incoming').append(personDiv); (5/6/14)
+        // [DELETE?] $('#chat-'+jidID).fadeIn('fast'); (5/6/14)
+
+        console.log('#chat-jidID triggered.');
+      }
+
+      // give fullJID data to person div
+      $('#chat-'+jidID).data('jid', fullJID);
+      console.log('jid data attached to #chat-jidID');
+      console.log($('#chat-'+jidID).data('jid'));
+
+      // ADD "TYPING..." FUNCTIONALITY
+      var composing = $(message).find('composing');
+      // if composing exists...
+      if (composing.length > 0) {
+        console.log('Composing triggered.');
+        // add the "is typing..." div
+        $('#chat-'+jidID).append(
+          '<div class="chat-event whisper-text">' +
+          Strophe.getNodeFromJid(jid) + //This is where the first/last name will go
+          ' is typing...</div>'
+        );
+        $('#chat-'+jidID).fadeIn('fast');
+        // make person div scrollable
+        this.scrollChat(jidID);
+      }
+
+      // FIND THE MESSAGE TEXT AND ADD TO MESSAGE DIV
+      var body = $(message).find("html > body");
+
+      // IF there is no body
+      if (body.length === 0) {
+        console.log('Body not found.');
+        body = $(message).find('body');
+        if (body.length > 0) {
+          // get message text
+          body = body.text();
+          console.log('First Body: '+body);
+        } else { // otherwise there is no message, set body to null
+          body = null;
         }
       } else {
-        console.log('No background page request detected. Action stopped.');
+        body = body.contents();
+        console.log('Second Body: '+body);
+
+        // MAKE SPAN OUT OF MESSAGE TEXT
+        var span = $("<span></span>");
+        body.each(function() {
+          if (document.importNode) {
+            $(document.importNode(this, true)).appendTo(span);
+          } else {
+            // IE workaround
+            span.append(this.xml);
+          }
+        });
+        body = span;
+        console.log('Third Body: '+body);
       }
-    }); 
-  }
+
+      // IF MESSAGE EXISTS
+      if (body) {
+        console.log('Body exists.');
+        // remove notifications since user is now active
+        $('#chat-'+jidID+' .chat-event').remove();
+        console.log('.chat-event removed.');
+
+        // add the new message wrappers
+        $('#chat-'+jidID).append(
+          '<div class="chat-message whisper-text">' +
+          Strophe.getNodeFromJid(jid) +
+          ': <span class="chat-text"></span>' +
+          '</div>'
+        );
+        console.log('.chat-message and .chat-text appended.');
+
+        // add the actual new message text
+        $('#chat-'+jidID+' .chat-message:last .chat-text').append(body);
+        console.log('Body appended to #chat-text.');
+        $('#chat-'+jidID).fadeIn('fast');
+
+        this.scrollChat(jidID);
+      }
+
+      // Incoming message fadeout detect
+      if (this.fadeout !== null) {
+        var fadeout = setTimeout(function() {
+          $("#chat-"+jidID).fadeOut('slow');
+        }, this.fadeout);  
+      }
+
+      $('#chat-'+jidID).click(function() {
+        if (fadeout) {
+          clearTimeout(fadeout);  
+        }
+      });
+
+      // ******************************************************************** \\
+      // ******* EVERYTHING ABOVE SHOULD BE HANDLED BY CONTENT SCRIPT ******* \\
+      // ******************************************************************** \\
+
+    }
+
+    // ******* CONNECTION RECEIVER ******* \\
+    if (request.type == "connection") {
+
+      console.log('Received connection status from connection.js: ', request);
+      sendResponse({response: "success"});
+
+      // Add handler for when successfully connected [10/28/14]
+    }
+  });
 
   // STORE ALL CHROME.STORAGE TO Whisper
   chrome.storage.sync.get(function (result) {
@@ -152,34 +239,6 @@ $(document).ready(function() {
 
 });
 
-// CONNECT EVENT \\
-$(document).bind('connect', function (ev, data) {
-  Whisper.connection = new Strophe.Connection(
-    'http://ec2-54-186-151-244.us-west-2.compute.amazonaws.com:5280/http-bind');
-
-  console.log('Connect triggered...');
-
-  Whisper.connection.connect(data.jid_master, data.pass_master, Whisper.on_connect);
-});
-
-// CONNECTED EVENT \\
-$(document).bind('connected', function () {
-  $('#login-status').html('[Connected!]');
-  console.log('Connected.');
-  console.log(Whisper.connection);
-
-  var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});
-  
-  Whisper.connection.sendIQ(iq, Whisper.on_roster);
-  Whisper.connection.addHandler(Whisper.on_roster_changed, "jabber:iq:roster", "iq", "set");
-  Whisper.connection.addHandler(Whisper.on_message, null, "message", "chat");
-
-  // [ADDED] delete loginStorage after usage, no longer need it (5/9/14)
-  Whisper.loginStorage.jid_master = null;
-  Whisper.loginStorage.pass_master = null;
-  console.log('Whisper.loginStorage JID: '+Whisper.loginStorage.jid_master+' and PASS: '+Whisper.loginStorage.pass_master);
-});
-
 // ATTACH EVENT \\
 $(document).bind('attach', function (ev, data) {
   Whisper.connection = new Strophe.Connection(
@@ -191,15 +250,6 @@ $(document).bind('attach', function (ev, data) {
   }
 });
 
-// DISCONNECTED EVENT \\
-$(document).bind('disconnected', function () {
-  // Manually (or maybe I can keep this one in the Whisper object?)
-  //Whisper.del_storage();
-  
-  Whisper.connection = null;
-  Whisper.pending_subscriber = null;
-  Whisper.on_connect;
-});
 
 // UNLOAD EVENT (Leaving page) \\
 $(window).bind('unload', function () {
