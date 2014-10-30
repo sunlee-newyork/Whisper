@@ -40,17 +40,6 @@ var Connector = {
       console.log('Roster handler return value: ', rosterHandler);
       var messageHandler = Connector.connection.addHandler(Message.onMessageReceived, null, "message", "chat");
       console.log('Message handler return value: ', messageHandler);
-
-      // Send connection status to all tabs [10/28/14]
-      chrome.tabs.query({}, function(tabs) {
-        for (var i=0; i<tabs.length; ++i) {
-          chrome.tabs.sendMessage(tabs[i].id, {
-            type: 'connection',
-            status: Connector.status
-          });
-        }
-      });
-
     } else if (status === Strophe.Status.DISCONNECTING) {
       console.log('Disconnecting initiated...');
       Connector.status = 7;
@@ -67,6 +56,27 @@ var Connector = {
     }
 
     Connector.sendStatus();
+  },
+
+  sendStatus: function () {
+    
+    // Send to options page
+    var views = chrome.extension.getViews();
+
+    views[1].Options.onStatusReceived(Connector.status, function () {
+      views[1].Options.handleStatus();
+    });
+
+    // Send to all open tabs
+    chrome.tabs.query({}, function(tabs) {
+      for (var i=0; i<tabs.length; ++i) {
+        chrome.tabs.sendMessage(tabs[i].id, {
+          type: 'connection',
+          status: Connector.status
+        });
+      }
+    });    
+
   },
 
   onConnected: function () {
@@ -153,14 +163,6 @@ var Connector = {
     });
 
     return true;
-  },
-
-  sendStatus: function () {
-    var views = chrome.extension.getViews();
-
-    views[1].Options.onStatusReceived(Connector.status, function () {
-      views[1].Options.handleStatus();
-    });
   },
 
   insertContact: function (elem) {

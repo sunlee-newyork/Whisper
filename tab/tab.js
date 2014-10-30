@@ -4,6 +4,12 @@ $('body').append(outgoingDiv);
 
 $(document).ready(function() {
 
+  chrome.runtime.sendMessage({type: "requestStatus"}, function(response) {
+    console.log('Response from background:');
+    console.log('Type: ' + response.type); 
+    console.log('Status: ' + response.status);
+  });
+
   chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
     // ******* MESSAGE RECEIVER ******* \\

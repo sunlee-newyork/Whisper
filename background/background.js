@@ -87,3 +87,14 @@ chrome.extension.onMessage.addListener(function (message, sender, sendResponse) 
     sendResponse({type: 'success'});
   }
 });
+
+// NEW TAB LISTENER [10/29/14]
+chrome.extension.onMessage.addListener(function (message, sender, sendResponse) {
+  if (message.type == 'requestStatus') {
+    console.log('Status request received from new tab.');
+    sendResponse({
+      type: 'connection',
+      status: Connector.status
+    });
+  }
+}); 
