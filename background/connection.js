@@ -22,7 +22,6 @@ var Connector = {
     } else if (status === Strophe.Status.CONNFAIL) {
       console.log('Connection failed.');
       Connector.status = 2;
-      //Connector.sendStatus();
     } else if (status === Strophe.Status.AUTHENTICATING) {
       console.log('Authenticating initiated...');
       Connector.status = 3;
@@ -33,20 +32,19 @@ var Connector = {
       console.log('Connected.');
       Connector.status = 5;
       Connector.onConnected();
-      //Connector.sendStatus(); // for some reason, this.onConnected(); is not working. weird?? [10/15/14]
       var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});      
       Connector.connection.sendIQ(iq, Connector.onRoster);
       var rosterHandler = Connector.connection.addHandler(Connector.onRosterChanged, "jabber:iq:roster", "iq", "set");
-      console.log('Roster handler return value: ', rosterHandler);
-      var messageHandler = Connector.connection.addHandler(Message.onMessageReceived, null, "message", "chat");
-      console.log('Message handler return value: ', messageHandler);
+      console.log('onRosterChanged handler return value: ', rosterHandler);
+      var messageHandler = Connector.connection.addHandler(Connector.onMessageIncoming, null, "message", "chat");
+      console.log('onMessageIncoming handler return value: ', messageHandler);
     } else if (status === Strophe.Status.DISCONNECTING) {
       console.log('Disconnecting initiated...');
       Connector.status = 7;
     } else if (status === Strophe.Status.DISCONNECTED) {
       console.log('Disconnected.');
       Connector.status = 6;
-      Connector.onDisconnected(); // $(document).trigger('disconnected');
+      Connector.onDisconnected();
     } else if (status === Strophe.Status.ATTACHED) {
       this.status = 8;
       var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});
@@ -163,6 +161,44 @@ var Connector = {
     });
 
     return true;
+  },
+
+  onMessageIncoming: function (msg) {
+
+    console.log('Message triggered: ', msg);
+    var fullJID = $(msg).attr('from');
+    console.log('Full JID: ' + fullJID);
+    var incomingJID = Strophe.getBareJidFromJid(fullJID);
+    console.log('JID: ' + incomingJID);
+    var jidID = Handler.convertJidToId(incomingJID);
+    console.log('JID converted to ID: ' + jidID);
+
+    // IF INCOMING MESSAGE [10/30/14]
+    var messageText = $(msg).children('body');
+
+    if (messageText.length > 0) {
+      console.log('Incoming message detected.\n Body from msg: ', messageText);
+      messageText = messageText.text();
+      console.log('Body text from msg: ' + messageText);
+
+      // Send message packet to all tabs [10/28/14]
+      chrome.tabs.query({}, function(tabs) {
+        for (var i=0; i<tabs.length; ++i) {
+          chrome.tabs.sendMessage(tabs[i].id, {
+            'type': 'message',
+            'message': messageText,
+            'jid': incomingJID,
+            'fullJID': fullJID, 
+            'jidID': jidID
+          });
+        }
+      });
+    }
+    
+  },
+
+  onMessageOutgoing: function (msg) {
+
   },
 
   insertContact: function (elem) {

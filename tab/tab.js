@@ -2,6 +2,28 @@
 var outgoingDiv = "<div id='whisper_outgoing'><input id='outgoing' /></div>";
 $('body').append(outgoingDiv);
 
+var Tab = {
+
+  convertJidToId: function (jid) {
+    return Strophe.getBareJidFromJid(jid)
+      .replace(/@/g, "-")
+      .replace(/\./g, "-");
+  },
+
+  scrollChat: function (jidID) {
+    // ORIGINAL Whisper \\
+    var height = $('#chat-'+jidID).scrollHeight;
+    $('#chat-'+jidID).scrollTop(height);
+
+    // MINE - VERSION 1 \\
+    // $('#chat-'+jidID+' :last-child').focus();
+
+    // MINE - VERSION 2 \\
+    // $('chat-'+jidID).lastChild.focus();
+  }
+
+}
+
 $(document).ready(function() {
 
   chrome.runtime.sendMessage({type: "requestStatus"}, function(response) {
@@ -14,6 +36,11 @@ $(document).ready(function() {
 
     // ******* MESSAGE RECEIVER ******* \\
     if (request.type == "message") {
+
+      var message = request.message;
+      var jid = request.jid;
+      var jidID = request.jidID;
+      var fullJID = request.fullJID;
 
       console.log('Received message packet from message.js: ', request);
       // ******************************************************************** \\
@@ -28,8 +55,6 @@ $(document).ready(function() {
         console.log('Person div: '+personDiv);
 
         $('body').append(personDiv);
-        // [DELETE?] $('#whisper_incoming').append(personDiv); (5/6/14)
-        // [DELETE?] $('#chat-'+jidID).fadeIn('fast'); (5/6/14)
 
         console.log('#chat-jidID triggered.');
       }
@@ -39,80 +64,33 @@ $(document).ready(function() {
       console.log('jid data attached to #chat-jidID');
       console.log($('#chat-'+jidID).data('jid'));
 
-      // ADD "TYPING..." FUNCTIONALITY
-      var composing = $(message).find('composing');
-      // if composing exists...
-      if (composing.length > 0) {
-        console.log('Composing triggered.');
-        // add the "is typing..." div
-        $('#chat-'+jidID).append(
-          '<div class="chat-event whisper-text">' +
-          Strophe.getNodeFromJid(jid) + //This is where the first/last name will go
-          ' is typing...</div>'
-        );
-        $('#chat-'+jidID).fadeIn('fast');
-        // make person div scrollable
-        this.scrollChat(jidID);
-      }
 
-      // FIND THE MESSAGE TEXT AND ADD TO MESSAGE DIV
-      var body = $(message).find("html > body");
-
-      // IF there is no body
-      if (body.length === 0) {
-        console.log('Body not found.');
-        body = $(message).find('body');
-        if (body.length > 0) {
-          // get message text
-          body = body.text();
-          console.log('First Body: '+body);
-        } else { // otherwise there is no message, set body to null
-          body = null;
-        }
-      } else {
-        body = body.contents();
-        console.log('Second Body: '+body);
-
-        // MAKE SPAN OUT OF MESSAGE TEXT
-        var span = $("<span></span>");
-        body.each(function() {
-          if (document.importNode) {
-            $(document.importNode(this, true)).appendTo(span);
-          } else {
-            // IE workaround
-            span.append(this.xml);
-          }
-        });
-        body = span;
-        console.log('Third Body: '+body);
-      }
+      // MAKE SPAN OUT OF MESSAGE TEXT
+      var span = $("<span></span>");
+      span = span.append(message)
 
       // IF MESSAGE EXISTS
-      if (body) {
-        console.log('Body exists.');
-        // remove notifications since user is now active
-        $('#chat-'+jidID+' .chat-event').remove();
-        console.log('.chat-event removed.');
+      if (message) {
 
         // add the new message wrappers
         $('#chat-'+jidID).append(
           '<div class="chat-message whisper-text">' +
-          Strophe.getNodeFromJid(jid) +
+          Strophe.getNodeFromJid(jid) +                              // <========= work on this next, this is prompting error [10/30/14]
           ': <span class="chat-text"></span>' +
           '</div>'
         );
         console.log('.chat-message and .chat-text appended.');
 
         // add the actual new message text
-        $('#chat-'+jidID+' .chat-message:last .chat-text').append(body);
-        console.log('Body appended to #chat-text.');
+        $('#chat-'+jidID+' .chat-message:last .chat-text').append(span);
+        console.log('Message <span> appended to #chat-text.');
         $('#chat-'+jidID).fadeIn('fast');
 
-        this.scrollChat(jidID);
+        Tab.scrollChat(jidID);
       }
 
       // Incoming message fadeout detect
-      if (this.fadeout !== null) {
+      if (Tab.fadeout !== null) {
         var fadeout = setTimeout(function() {
           $("#chat-"+jidID).fadeOut('slow');
         }, this.fadeout);  
@@ -153,12 +131,12 @@ $(document).ready(function() {
         console.log(array[i]+'_checkbox detected: '+result[array[i]+'_checkbox']);
         if (result[array[i]]) {
           console.log(array[i]+' detected.', result[array[i]]);
-          Whisper[array[i]] = result[array[i]];
-          console.log('Whisper.'+array[i]+': ', Whisper[array[i]]);
+          Tab[array[i]] = result[array[i]];
+          console.log('Tab.'+array[i]+': ', Tab[array[i]]);
           if (result[array[i]+'_jid']) {
-            Whisper[array[i]+'_jid'] = result[array[i]+'_jid'];
-            Whisper[array[i]+'_name'] = result[array[i]+'_name'];
-            console.log('Whisper '+array[i]+'_jid: '+Whisper[array[i]+'_jid']+' and '+array[i]+'_name: '+Whisper[array[i]+'_name']);
+            Tab[array[i]+'_jid'] = result[array[i]+'_jid'];
+            Tab[array[i]+'_name'] = result[array[i]+'_name'];
+            console.log('Whisper '+array[i]+'_jid: '+Tab[array[i]+'_jid']+' and '+array[i]+'_name: '+Tab[array[i]+'_name']);
           }
         }
       }
@@ -169,22 +147,22 @@ $(document).ready(function() {
   // OUTGOING CHAT LISTENER
   $('#outgoing').on('keypress', function (ev) {
     //var jid = (Strophe.getBareJidFromJid('-100008213824782@chat.facebook.com')); // change this later
-    //var jid_id = Whisper.jid_to_id(jid); // change this later
+    //var jid_id = Tab.convertJidToId(jid); // change this later
     var friend = $(this).attr('data-friend');
     switch (friend) {
-      case 'first': var jid = Whisper.first_jid;
+      case 'first': var jid = Tab.first_jid;
       break;
-      case 'second': var jid = Whisper.second_jid;
+      case 'second': var jid = Tab.second_jid;
       break;
-      case 'third': var jid = Whisper.third_jid;
+      case 'third': var jid = Tab.third_jid;
       break;
-      case 'fourth': var jid = Whisper.fourth_jid;
+      case 'fourth': var jid = Tab.fourth_jid;
       break;
-      case 'fifth': var jid = Whisper.fifth_jid;
+      case 'fifth': var jid = Tab.fifth_jid;
       break;
     }
     console.log('JID: '+jid);
-    var jid_id = Whisper.jid_to_id(jid);
+    var jid_id = Tab.convertJidToId(jid);
     console.log('Jid_id: '+jid_id);
 
     // IF 'enter' is pressed...
@@ -203,18 +181,18 @@ $(document).ready(function() {
         .c('active', {xmlns: "http://jabber.org/protocol/chatstates"});
 
       // Send the message through Strophe
-      Whisper.connection.send(message);
+      Tab.connection.send(message);
 
       // Find the corresponding incoming message div
       $('#chat-'.jid_id).append( // #chat-jid_id => change this later
         '<div class="chat-message">' +
-        Strophe.getNodeFromJid(Whisper.connection.jid) +
+        Strophe.getNodeFromJid(Tab.connection.jid) +
         '<span class="chat-text">' +
         body +
         "</span></div>"
       );
 
-      Whisper.scroll_chat(jid_id);
+      Tab.scrollChat(jid_id);
 
       // Not sure what this does
       $(this).val('');
@@ -236,7 +214,7 @@ $(document).ready(function() {
           "type": "chat"
         }).c('composing', {xmlns: "http://jabber.org/protocol/chatstates"});
 
-        Whisper.connection.send(notify);
+        Tab.connection.send(notify);
 
         $('#chat-'+jid_id).data('composing', true);
       }
@@ -245,30 +223,19 @@ $(document).ready(function() {
 
 });
 
-// ATTACH EVENT \\
-$(document).bind('attach', function (ev, data) {
-  Whisper.connection = new Strophe.Connection(
-   'http://ec2-54-186-151-244.us-west-2.compute.amazonaws.com:5280/http-bind');
-
-  if (data.jid || data.sid || data.rid) {
-    Whisper.connection.attach(data.jid, data.sid, data.rid, Whisper.on_connect);
-    Whisper.connection.addHandler(Whisper.on_message, null, "message", "chat");  
-  }
-});
-
 
 // UNLOAD EVENT (Leaving page) \\
 $(window).bind('unload', function () {
   console.log('Unload triggered.');
-  if (Whisper.connection !== null) {
+  if (Tab.connection !== null) {
     // Store JID/SID/RID to sessionStorages
-    sessionStorage.setItem('jid', Whisper.connection.jid);
-    sessionStorage.setItem('sid', Whisper.connection._proto.sid);
-    sessionStorage.setItem('rid', Whisper.connection._proto.rid);
+    sessionStorage.setItem('jid', Tab.connection.jid);
+    sessionStorage.setItem('sid', Tab.connection._proto.sid);
+    sessionStorage.setItem('rid', Tab.connection._proto.rid);
     console.log('JID/SID/RID saved to sessionStorage');
   } else {
     // Manually delete JID/SID/RID to chrome.storage here (or maybe I can keep this one in the Whisper object?)\\
-    Whisper.del_storage();
+    Tab.del_storage();
   }
 });
 
@@ -277,25 +244,25 @@ $(window).keydown(function (e) {
   console.log('Keydown triggered.');
   console.log(e.keyCode);
 
-  if (e.keyCode in Whisper.first) {
+  if (e.keyCode in Tab.first) {
     
-    Whisper.first[e.keyCode] = true;
+    Tab.first[e.keyCode] = true;
     var first_counter = 0;
 
-    for (var x in Whisper.first) {
-      if (Whisper.first[x] == true) {
-        first_counter = first_counter + 1; // [DELETE] Whisper.first['triggered'] = true;
+    for (var x in Tab.first) {
+      if (Tab.first[x] == true) {
+        first_counter = first_counter + 1; // [DELETE] Tab.first['triggered'] = true;
         console.log('First_counter: '+first_counter);
       }
     }
 
-    console.log(Whisper.first);
+    console.log(Tab.first);
 
     // FIRE EVENT
-    if (first_counter === 3) { // [DELETE] if (Whisper.first.triggered === true) {
-      console.log('Hotkeys for '+Whisper.first_name+' pressed.');
+    if (first_counter === 3) { // [DELETE] if (Tab.first.triggered === true) {
+      console.log('Hotkeys for '+Tab.first_name+' pressed.');
       $('#whisper_outgoing').show();
-      var jid_id = Whisper.jid_to_id(Whisper.first_jid); 
+      var jid_id = Tab.convertJidToId(Tab.first_jid); 
       console.log('Jid_id: '+jid_id);
       // [DELETE] $('#whisper_incoming').show(); (5/6/14)
       $('#chat-'+jid_id).show();
@@ -306,24 +273,24 @@ $(window).keydown(function (e) {
     }   
   }
   // NEED TO FILL REST OF FRIENDS
-  if (e.keyCode in Whisper.second) {
+  if (e.keyCode in Tab.second) {
     
-    Whisper.second[e.keyCode] = true;
+    Tab.second[e.keyCode] = true;
     var second_counter = 0;
 
-    for (var x in Whisper.second) {
-      if (Whisper.second[x] == true) {
-        second_counter = second_counter + 1; // [DELETE] Whisper.second['triggered'] = true;
+    for (var x in Tab.second) {
+      if (Tab.second[x] == true) {
+        second_counter = second_counter + 1; // [DELETE] Tab.second['triggered'] = true;
       }
     }
 
-    console.log(Whisper.second);
+    console.log(Tab.second);
 
     // FIRE EVENT
-    if (second_counter === 3) { // [DELETE] if (Whisper.second.triggered === true) {
-      console.log('Hotkeys for '+Whisper.second_name+' pressed.');
+    if (second_counter === 3) { // [DELETE] if (Tab.second.triggered === true) {
+      console.log('Hotkeys for '+Tab.second_name+' pressed.');
       $('#whisper_outgoing').show();
-      var jid_id = Whisper.jid_to_id(Whisper.second_jid); 
+      var jid_id = Tab.convertJidToId(Tab.second_jid); 
       $('#chat-'+jid_id).show();
       setTimeout(function() {
         $('#outgoing').focus();
@@ -331,24 +298,24 @@ $(window).keydown(function (e) {
       }, 20);
     }   
   }
-  if (e.keyCode in Whisper.third) {
+  if (e.keyCode in Tab.third) {
     
-    Whisper.third[e.keyCode] = true;
+    Tab.third[e.keyCode] = true;
     var third_counter = 0;
 
-    for (var x in Whisper.third) {
-      if (Whisper.third[x] == true) {
-        third_counter = third_counter + 1; // [DELETE] Whisper.third['triggered'] = true;
+    for (var x in Tab.third) {
+      if (Tab.third[x] == true) {
+        third_counter = third_counter + 1; // [DELETE] Tab.third['triggered'] = true;
       }
     }
 
-    console.log(Whisper.third);
+    console.log(Tab.third);
 
     // FIRE EVENT
-    if (third_counter === 3) { // [DELETE] if (Whisper.third.triggered === true) {
-      console.log('Hotkeys for '+Whisper.third_name+' pressed.');
+    if (third_counter === 3) { // [DELETE] if (Tab.third.triggered === true) {
+      console.log('Hotkeys for '+Tab.third_name+' pressed.');
       $('#whisper_outgoing').show();
-      var jid_id = Whisper.jid_to_id(Whisper.third_jid); 
+      var jid_id = Tab.convertJidToId(Tab.third_jid); 
       $('#chat-'+jid_id).show();
       setTimeout(function() {
         $('#outgoing').focus();
@@ -356,24 +323,24 @@ $(window).keydown(function (e) {
       }, 20);
     }   
   }
-  if (e.keyCode in Whisper.fourth) {
+  if (e.keyCode in Tab.fourth) {
     
-    Whisper.fourth[e.keyCode] = true;
+    Tab.fourth[e.keyCode] = true;
     var fourth_counter = 0;
 
-    for (var x in Whisper.fourth) {
-      if (Whisper.fourth[x] == true) {
-        fourth_counter = fourth_counter + 1; // [DELETE] Whisper.fourth['triggered'] = true;
+    for (var x in Tab.fourth) {
+      if (Tab.fourth[x] == true) {
+        fourth_counter = fourth_counter + 1; // [DELETE] Tab.fourth['triggered'] = true;
       }
     }
 
-    console.log(Whisper.fourth);
+    console.log(Tab.fourth);
 
     // FIRE EVENT
-    if (fourth_counter === 3) { // [DELETE] if (Whisper.fourth.triggered === true) {
-      console.log('Hotkeys for '+Whisper.fourth_name+' pressed.');
+    if (fourth_counter === 3) { // [DELETE] if (Tab.fourth.triggered === true) {
+      console.log('Hotkeys for '+Tab.fourth_name+' pressed.');
       $('#whisper_outgoing').show();
-      var jid_id = Whisper.jid_to_id(Whisper.fourth_jid); 
+      var jid_id = Tab.convertJidToId(Tab.fourth_jid); 
       $('#chat-'+jid_id).show();
       setTimeout(function() {
         $('#outgoing').focus();
@@ -381,24 +348,24 @@ $(window).keydown(function (e) {
       }, 20);
     }   
   }
-  if (e.keyCode in Whisper.fifth) {
+  if (e.keyCode in Tab.fifth) {
     
-    Whisper.fifth[e.keyCode] = true;
+    Tab.fifth[e.keyCode] = true;
     var fifth_counter = 0;
 
-    for (var x in Whisper.fifth) {
-      if (Whisper.fifth[x] == true) {
-        fifth_counter = fifth_counter + 1; // [DELETE] Whisper.fifth['triggered'] = true;
+    for (var x in Tab.fifth) {
+      if (Tab.fifth[x] == true) {
+        fifth_counter = fifth_counter + 1; // [DELETE] Tab.fifth['triggered'] = true;
       }
     }
 
-    console.log(Whisper.fifth);
+    console.log(Tab.fifth);
 
     // FIRE EVENT
-    if (fifth_counter === 3) { // [DELETE] if (Whisper.fifth.triggered === true) {
-      console.log('Hotkeys for '+Whisper.fifth_name+' pressed.');
+    if (fifth_counter === 3) { // [DELETE] if (Tab.fifth.triggered === true) {
+      console.log('Hotkeys for '+Tab.fifth_name+' pressed.');
       $('#whisper_outgoing').show();
-      var jid_id = Whisper.jid_to_id(Whisper.fifth_jid); 
+      var jid_id = Tab.convertJidToId(Tab.fifth_jid); 
       $('#chat-'+jid_id).show();
       setTimeout(function() {
         $('#outgoing').focus();
@@ -407,47 +374,47 @@ $(window).keydown(function (e) {
     }   
   }
 }).keyup(function (e) {
-  if (e.keyCode in Whisper.first) {
-    Whisper.first[e.keyCode] = false;
-    Whisper.first.triggered = false;
-    console.log('Whisper.first after keyup:');
-    console.log(Whisper.first);
-    console.log('Whisper.first.triggered after keyup: '+Whisper.first.triggered);
+  if (e.keyCode in Tab.first) {
+    Tab.first[e.keyCode] = false;
+    Tab.first.triggered = false;
+    console.log('Tab.first after keyup:');
+    console.log(Tab.first);
+    console.log('Tab.first.triggered after keyup: '+Tab.first.triggered);
   }
-  if (e.keyCode in Whisper.second) {
-    Whisper.second[e.keyCode] = false;
-    Whisper.second.triggered = false;
-    console.log('Whisper.second after keyup: '+Whisper.second);
-    console.log(Whisper.second);
-    console.log('Whisper.second.triggered after keyup: '+Whisper.second.triggered);
+  if (e.keyCode in Tab.second) {
+    Tab.second[e.keyCode] = false;
+    Tab.second.triggered = false;
+    console.log('Tab.second after keyup: '+Tab.second);
+    console.log(Tab.second);
+    console.log('Tab.second.triggered after keyup: '+Tab.second.triggered);
   }
-  if (e.keyCode in Whisper.third) {
-    Whisper.third[e.keyCode] = false;
-    Whisper.third.triggered = false;
-    console.log('Whisper.third after keyup: '+Whisper.third);
-    console.log(Whisper.third);
-    console.log('Whisper.third.triggered after keyup: '+Whisper.third.triggered);
+  if (e.keyCode in Tab.third) {
+    Tab.third[e.keyCode] = false;
+    Tab.third.triggered = false;
+    console.log('Tab.third after keyup: '+Tab.third);
+    console.log(Tab.third);
+    console.log('Tab.third.triggered after keyup: '+Tab.third.triggered);
   }
-  if (e.keyCode in Whisper.fourth) {
-    Whisper.fourth[e.keyCode] = false;
-    Whisper.fourth.triggered = false;
-    console.log('Whisper.fourth after keyup: '+Whisper.fourth);
-    console.log(Whisper.fourth);
-    console.log('Whisper.fourth.triggered after keyup: '+Whisper.fourth.triggered);
+  if (e.keyCode in Tab.fourth) {
+    Tab.fourth[e.keyCode] = false;
+    Tab.fourth.triggered = false;
+    console.log('Tab.fourth after keyup: '+Tab.fourth);
+    console.log(Tab.fourth);
+    console.log('Tab.fourth.triggered after keyup: '+Tab.fourth.triggered);
   }
-  if (e.keyCode in Whisper.fifth) {
-    Whisper.fifth[e.keyCode] = false;
-    Whisper.fifth.triggered = false;
-    console.log('Whisper.fifth after keyup: '+Whisper.fifth);
-    console.log(Whisper.fifth);
-    console.log('Whisper.fifth.triggered after keyup: '+Whisper.fifth.triggered);
+  if (e.keyCode in Tab.fifth) {
+    Tab.fifth[e.keyCode] = false;
+    Tab.fifth.triggered = false;
+    console.log('Tab.fifth after keyup: '+Tab.fifth);
+    console.log(Tab.fifth);
+    console.log('Tab.fifth.triggered after keyup: '+Tab.fifth.triggered);
   }
 });
 
 // IF mouse is clicked outside #whisper_outgoing...
 $(document).on('click', function(event) {
   // [ADDED] ONLY IF fadeout is set (5/6/14)
-  if (Whisper.fadeout) {
+  if (Tab.fadeout) {
     // FOR INCOMING DIV
     if ($(event.target).parents().index($('.chat-div')) == -1) {
       if ($('.chat-div').is(":visible")) {
