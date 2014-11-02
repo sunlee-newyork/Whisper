@@ -51,7 +51,7 @@ var Options = {
     return keyBank;
   },
 
-  save: function (option, friendJid, friendName) {
+  save: function (option, jid, name) {
     // Options need to be passed as an object to chrome.storage, so create placeholder
     var optionsPlaceholder = {};
 
@@ -86,9 +86,9 @@ var Options = {
         console.log('Options placeholder: ', optionsPlaceholder);
 
         // *** IF FRIENDS OPTION *** \\
-        if (friendJid) {
-          optionsPlaceholder[option]['friendJid'] = Options[friendJid];
-          optionsPlaceholder[option]['friendName'] = Options[friendName];
+        if (jid) {
+          optionsPlaceholder[option]['jid'] = Options[jid];
+          optionsPlaceholder[option]['name'] = Options[name];
         }
 
         /* This gets prompted even when checkbox is not checked. Need to get back to this.
@@ -251,12 +251,12 @@ $(document).ready(function() {
           $('#'+array[i]).attr('value', characters);
 
           // *** IF FRIENDS *** \\
-          if (result[array[i]]['friendJid']) {
+          if (result[array[i]]['jid']) {
 
-            $('#'+array[i]+'_link').html(result[array[i]]['friendName']+' (click to change)');
+            $('#'+array[i]+'_link').html(result[array[i]]['name']+' (click to change)');
 
-            Options[array[i]+'_jid'] = result[array[i]]['friendJid'];
-            Options[array[i]+'_name'] = result[array[i]]['friendName'];
+            Options[array[i]+'_jid'] = result[array[i]]['jid'];
+            Options[array[i]+'_name'] = result[array[i]]['name'];
 
           } 
 
@@ -500,7 +500,9 @@ $(document).ready(function() {
             $('#fifth_link').html(Options.fifth_name+' (click to change)');
             break;
         }
-        
+
+        $('#roster_searchbar').empty();
+        $('.roster-list').empty();        
         $('#roster-area').addClass('hidden');
         $('.container').width(725);
       });

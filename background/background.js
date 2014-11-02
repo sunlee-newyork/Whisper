@@ -66,8 +66,9 @@ chrome.tabs.onCreated.addListener(function (tab) {
 =                           MESSAGE LISTENERS                           =
 ====================================================================== */
 
-// [ADDED] DISCONNECT LISTENER (5/15/14) \\
 chrome.extension.onMessage.addListener(function (message, sender, sendResponse) {
+
+  // [ADDED] DISCONNECT LISTENER (5/15/14) \\
   if (message.type == 'disconnect') {
     Connector.connection.disconnect();
     Connector.connection = null;
@@ -75,21 +76,8 @@ chrome.extension.onMessage.addListener(function (message, sender, sendResponse) 
 
     sendResponse({type: 'success'});
   }
-});
 
-
-// [ADDED] OUTGOING MESSAGE LISTENER [10/15/14] \\
-chrome.extension.onMessage.addListener(function (message, sender, sendResponse) {
-  if (message.type == 'incomingMessage') {
-
-    // ......... Need to fill in the rest when incoming message is received [10/15/14]
-
-    sendResponse({type: 'success'});
-  }
-});
-
-// NEW TAB LISTENER [10/29/14]
-chrome.extension.onMessage.addListener(function (message, sender, sendResponse) {
+  // NEW TAB LISTENER [10/29/14]
   if (message.type == 'requestStatus') {
     console.log('Status request received from new tab.');
     sendResponse({
@@ -97,4 +85,14 @@ chrome.extension.onMessage.addListener(function (message, sender, sendResponse) 
       status: Connector.status
     });
   }
-}); 
+
+  // OUTGOING MESSAGE LISTENER [11/1/14]
+  if (message.type == 'outgoingMessage') {
+    console.log('Outgoing message request received from tab.');
+    console.log('Message body: ' + request.body);
+    sendResponse({type: 'success'});
+    Connector.onMessageOutgoing(request.body);
+  }
+
+});
+

@@ -4,6 +4,8 @@ $('body').append(outgoingDiv);
 
 var Tab = {
 
+  options: {},
+
   convertJidToId: function (jid) {
     return Strophe.getBareJidFromJid(jid)
       .replace(/@/g, "-")
@@ -35,12 +37,12 @@ $(document).ready(function() {
   chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
     // ******* MESSAGE RECEIVER ******* \\
-    if (request.type == "message") {
+    if (request.type == "incomingMessage") {
 
       var message = request.message;
       var jid = request.jid;
       var jidID = request.jidID;
-      var fullJID = request.fullJID;
+      var name = request.name;
 
       console.log('Received message packet from message.js: ', request);
       // ******************************************************************** \\
@@ -60,14 +62,9 @@ $(document).ready(function() {
       }
 
       // give fullJID data to person div
-      $('#chat-'+jidID).data('jid', fullJID);
+      $('#chat-'+jidID).data({'jid': jid, 'name': name});
       console.log('jid data attached to #chat-jidID');
       console.log($('#chat-'+jidID).data('jid'));
-
-
-      // MAKE SPAN OUT OF MESSAGE TEXT
-      var span = $("<span></span>");
-      span = span.append(message)
 
       // IF MESSAGE EXISTS
       if (message) {
@@ -75,14 +72,14 @@ $(document).ready(function() {
         // add the new message wrappers
         $('#chat-'+jidID).append(
           '<div class="chat-message whisper-text">' +
-          Strophe.getNodeFromJid(jid) +                              // <========= work on this next, this is prompting error [10/30/14]
+          name +                              // <========= work on this next, this is prompting error [10/30/14]
           ': <span class="chat-text"></span>' +
           '</div>'
         );
         console.log('.chat-message and .chat-text appended.');
 
         // add the actual new message text
-        $('#chat-'+jidID+' .chat-message:last .chat-text').append(span);
+        $('#chat-'+jidID+' .chat-message:last .chat-text').append(message);
         console.log('Message <span> appended to #chat-text.');
         $('#chat-'+jidID).fadeIn('fast');
 
@@ -90,10 +87,10 @@ $(document).ready(function() {
       }
 
       // Incoming message fadeout detect
-      if (Tab.fadeout !== null) {
+      if (Tab.options.fadeout.enabled == true) {
         var fadeout = setTimeout(function() {
-          $("#chat-"+jidID).fadeOut('slow');
-        }, this.fadeout);  
+          $("#chat-"+jidID).fadeOut('fast');
+        }, Tab.options.fadeout.timespan);  
       }
 
       $('#chat-'+jidID).click(function() {
@@ -121,8 +118,10 @@ $(document).ready(function() {
   // STORE ALL CHROME.STORAGE TO Whisper
   chrome.storage.sync.get(function (result) {
     console.log('chrome.storage triggered.');
-    console.log(result);
+    Tab['options'] = result;
+    console.log('Tab options saved: ', Tab.options);
 
+/* [DELETE] Saving result directly into Tab.options object [11/1/14]
     // [EDITED] DRYless version of chrome.storage retrieval (5/13/14)
     var array = ['onoff', 'first', 'second', 'third', 'fourth', 'fifth', 'timeout', 'fadeout']
 
@@ -142,6 +141,19 @@ $(document).ready(function() {
       }
     }
 
+    // Retrieve Chrome storage data [11/1/14]
+    for (var x in result) {
+      // If option is enabled...
+      if (result[x].enabled == true) {
+
+        if (result[x] == 'fadeout') {
+
+        }
+
+      }
+    }
+*/
+
   });
 
   // OUTGOING CHAT LISTENER
@@ -150,15 +162,15 @@ $(document).ready(function() {
     //var jid_id = Tab.convertJidToId(jid); // change this later
     var friend = $(this).attr('data-friend');
     switch (friend) {
-      case 'first': var jid = Tab.first_jid;
+      case 'first': var jid = Tab.first.jid;
       break;
-      case 'second': var jid = Tab.second_jid;
+      case 'second': var jid = Tab.second.jid;
       break;
-      case 'third': var jid = Tab.third_jid;
+      case 'third': var jid = Tab.third.jid;
       break;
-      case 'fourth': var jid = Tab.fourth_jid;
+      case 'fourth': var jid = Tab.fourth.jid;
       break;
-      case 'fifth': var jid = Tab.fifth_jid;
+      case 'fifth': var jid = Tab.fifth.jid;
       break;
     }
     console.log('JID: '+jid);
@@ -173,23 +185,15 @@ $(document).ready(function() {
       // Get the outgoing message text
       var body = $(this).val();
 
-      // Construct the message xmlns
-      var message = $msg({
-        to: jid,
-        "type": "chat"
-      }).c('body').t(body).up()
-        .c('active', {xmlns: "http://jabber.org/protocol/chatstates"});
+      chrome.runtime.sendMessage({type: "outgoingMessage", body: body}, function(response) {
+        console.log('Response from background: ' + response);
+      });
 
-      // Send the message through Strophe
-      Tab.connection.send(message);
+      // Originally sent message via Strophe directly here, moved to connection.js [11/1/14]
 
       // Find the corresponding incoming message div
-      $('#chat-'.jid_id).append( // #chat-jid_id => change this later
-        '<div class="chat-message">' +
-        Strophe.getNodeFromJid(Tab.connection.jid) +
-        '<span class="chat-text">' +
-        body +
-        "</span></div>"
+      $('#chat-'+jid_id).append( // #chat-jid_id => change this later
+        '<div class="chat-message">Me: <span class="chat-text">' + body + "</span></div>"
       );
 
       Tab.scrollChat(jid_id);
@@ -223,46 +227,30 @@ $(document).ready(function() {
 
 });
 
-
-// UNLOAD EVENT (Leaving page) \\
-$(window).bind('unload', function () {
-  console.log('Unload triggered.');
-  if (Tab.connection !== null) {
-    // Store JID/SID/RID to sessionStorages
-    sessionStorage.setItem('jid', Tab.connection.jid);
-    sessionStorage.setItem('sid', Tab.connection._proto.sid);
-    sessionStorage.setItem('rid', Tab.connection._proto.rid);
-    console.log('JID/SID/RID saved to sessionStorage');
-  } else {
-    // Manually delete JID/SID/RID to chrome.storage here (or maybe I can keep this one in the Whisper object?)\\
-    Tab.del_storage();
-  }
-});
-
 // INSTEAD OF ^, GET KEYCODES FROM Whisper
 $(window).keydown(function (e) {
   console.log('Keydown triggered.');
   console.log(e.keyCode);
 
-  if (e.keyCode in Tab.first) {
+  if (e.keyCode in Tab.first.keyBank) {
     
-    Tab.first[e.keyCode] = true;
+    Tab.first.keyBank[e.keyCode] = true;
     var first_counter = 0;
 
-    for (var x in Tab.first) {
-      if (Tab.first[x] == true) {
-        first_counter = first_counter + 1; // [DELETE] Tab.first['triggered'] = true;
+    for (var x in Tab.first.keyBank) {
+      if (Tab.first.keyBank[x] == true) {
+        first_counter = first_counter + 1;
         console.log('First_counter: '+first_counter);
       }
     }
 
-    console.log(Tab.first);
+    console.log(Tab.first.keyBank);
 
     // FIRE EVENT
-    if (first_counter === 3) { // [DELETE] if (Tab.first.triggered === true) {
-      console.log('Hotkeys for '+Tab.first_name+' pressed.');
+    if (first_counter === 3) {
+      console.log('Hotkeys for '+Tab.first.name+' pressed.');
       $('#whisper_outgoing').show();
-      var jid_id = Tab.convertJidToId(Tab.first_jid); 
+      var jid_id = Tab.convertJidToId(Tab.first.jid); 
       console.log('Jid_id: '+jid_id);
       // [DELETE] $('#whisper_incoming').show(); (5/6/14)
       $('#chat-'+jid_id).show();
@@ -273,148 +261,138 @@ $(window).keydown(function (e) {
     }   
   }
   // NEED TO FILL REST OF FRIENDS
-  if (e.keyCode in Tab.second) {
+  if (e.keyCode in Tab.second.keyBank) {
     
-    Tab.second[e.keyCode] = true;
+    Tab.second.keyBank[e.keyCode] = true;
     var second_counter = 0;
 
-    for (var x in Tab.second) {
-      if (Tab.second[x] == true) {
-        second_counter = second_counter + 1; // [DELETE] Tab.second['triggered'] = true;
+    for (var x in Tab.second.keyBank) {
+      if (Tab.second.keyBank[x] == true) {
+        second_counter = second_counter + 1;
       }
     }
 
-    console.log(Tab.second);
+    console.log(Tab.second.keyBank);
 
     // FIRE EVENT
-    if (second_counter === 3) { // [DELETE] if (Tab.second.triggered === true) {
-      console.log('Hotkeys for '+Tab.second_name+' pressed.');
+    if (second_counter === 3) { 
+      console.log('Hotkeys for '+Tab.second.name+' pressed.');
       $('#whisper_outgoing').show();
-      var jid_id = Tab.convertJidToId(Tab.second_jid); 
+      var jid_id = Tab.convertJidToId(Tab.second.jid); 
       $('#chat-'+jid_id).show();
       setTimeout(function() {
         $('#outgoing').focus();
-        $('#outgoing').attr('data-friend', 'second'); // <=====
+        $('#outgoing').attr('data-friend', 'second');
       }, 20);
     }   
   }
-  if (e.keyCode in Tab.third) {
+  if (e.keyCode in Tab.third.keyBank) {
     
-    Tab.third[e.keyCode] = true;
+    Tab.third.keyBank[e.keyCode] = true;
     var third_counter = 0;
 
-    for (var x in Tab.third) {
-      if (Tab.third[x] == true) {
-        third_counter = third_counter + 1; // [DELETE] Tab.third['triggered'] = true;
+    for (var x in Tab.third.keyBank) {
+      if (Tab.third.keyBank[x] == true) {
+        third_counter = third_counter + 1;
       }
     }
 
-    console.log(Tab.third);
+    console.log(Tab.third.keyBank);
 
     // FIRE EVENT
-    if (third_counter === 3) { // [DELETE] if (Tab.third.triggered === true) {
-      console.log('Hotkeys for '+Tab.third_name+' pressed.');
+    if (third_counter === 3) { 
+      console.log('Hotkeys for '+Tab.third.name+' pressed.');
       $('#whisper_outgoing').show();
-      var jid_id = Tab.convertJidToId(Tab.third_jid); 
+      var jid_id = Tab.convertJidToId(Tab.third.jid); 
       $('#chat-'+jid_id).show();
       setTimeout(function() {
         $('#outgoing').focus();
-        $('#outgoing').attr('data-friend', 'third'); // <=====
+        $('#outgoing').attr('data-friend', 'third');
       }, 20);
     }   
   }
-  if (e.keyCode in Tab.fourth) {
+  if (e.keyCode in Tab.fourth.keyBank) {
     
-    Tab.fourth[e.keyCode] = true;
+    Tab.fourth.keyBank[e.keyCode] = true;
     var fourth_counter = 0;
 
-    for (var x in Tab.fourth) {
-      if (Tab.fourth[x] == true) {
-        fourth_counter = fourth_counter + 1; // [DELETE] Tab.fourth['triggered'] = true;
+    for (var x in Tab.fourth.keyBank) {
+      if (Tab.fourth.keyBank[x] == true) {
+        fourth_counter = fourth_counter + 1;
       }
     }
 
-    console.log(Tab.fourth);
+    console.log(Tab.fourth.keyBank);
 
     // FIRE EVENT
-    if (fourth_counter === 3) { // [DELETE] if (Tab.fourth.triggered === true) {
-      console.log('Hotkeys for '+Tab.fourth_name+' pressed.');
+    if (fourth_counter === 3) { 
+      console.log('Hotkeys for '+Tab.fourth.name+' pressed.');
       $('#whisper_outgoing').show();
-      var jid_id = Tab.convertJidToId(Tab.fourth_jid); 
+      var jid_id = Tab.convertJidToId(Tab.fourth.jid); 
       $('#chat-'+jid_id).show();
       setTimeout(function() {
         $('#outgoing').focus();
-        $('#outgoing').attr('data-friend', 'fourth'); // <=====
+        $('#outgoing').attr('data-friend', 'fourth');
       }, 20);
     }   
   }
-  if (e.keyCode in Tab.fifth) {
+  if (e.keyCode in Tab.fifth.keyBank) {
     
-    Tab.fifth[e.keyCode] = true;
+    Tab.fifth.keyBank[e.keyCode] = true;
     var fifth_counter = 0;
 
-    for (var x in Tab.fifth) {
-      if (Tab.fifth[x] == true) {
-        fifth_counter = fifth_counter + 1; // [DELETE] Tab.fifth['triggered'] = true;
+    for (var x in Tab.fifth.keyBank) {
+      if (Tab.fifth.keyBank[x] == true) {
+        fifth_counter = fifth_counter + 1; 
       }
     }
 
-    console.log(Tab.fifth);
+    console.log(Tab.fifth.keyBank);
 
     // FIRE EVENT
-    if (fifth_counter === 3) { // [DELETE] if (Tab.fifth.triggered === true) {
-      console.log('Hotkeys for '+Tab.fifth_name+' pressed.');
+    if (fifth_counter === 3) { 
+      console.log('Hotkeys for '+Tab.fifth.name+' pressed.');
       $('#whisper_outgoing').show();
-      var jid_id = Tab.convertJidToId(Tab.fifth_jid); 
+      var jid_id = Tab.convertJidToId(Tab.fifth.jid); 
       $('#chat-'+jid_id).show();
       setTimeout(function() {
         $('#outgoing').focus();
-        $('#outgoing').attr('data-friend', 'fifth'); // <=====
+        $('#outgoing').attr('data-friend', 'fifth');
       }, 20);
     }   
   }
 }).keyup(function (e) {
-  if (e.keyCode in Tab.first) {
-    Tab.first[e.keyCode] = false;
-    Tab.first.triggered = false;
-    console.log('Tab.first after keyup:');
-    console.log(Tab.first);
-    console.log('Tab.first.triggered after keyup: '+Tab.first.triggered);
+  if (e.keyCode in Tab.first.keyBank) {
+    Tab.first.keyBank[e.keyCode] = false;
+    console.log('Tab.first.keyBank after keyup:');
+    console.log(Tab.first.keyBank);
   }
-  if (e.keyCode in Tab.second) {
-    Tab.second[e.keyCode] = false;
-    Tab.second.triggered = false;
-    console.log('Tab.second after keyup: '+Tab.second);
-    console.log(Tab.second);
-    console.log('Tab.second.triggered after keyup: '+Tab.second.triggered);
+  if (e.keyCode in Tab.second.keyBank) {
+    Tab.second.keyBank[e.keyCode] = false;
+    console.log('Tab.second after keyup: '+Tab.second.keyBank);
+    console.log(Tab.second.keyBank);
   }
-  if (e.keyCode in Tab.third) {
-    Tab.third[e.keyCode] = false;
-    Tab.third.triggered = false;
-    console.log('Tab.third after keyup: '+Tab.third);
-    console.log(Tab.third);
-    console.log('Tab.third.triggered after keyup: '+Tab.third.triggered);
+  if (e.keyCode in Tab.third.keyBank) {
+    Tab.third.keyBank[e.keyCode] = false;
+    console.log('Tab.third after keyup: '+Tab.third.keyBank);
+    console.log(Tab.third.keyBank);
   }
-  if (e.keyCode in Tab.fourth) {
-    Tab.fourth[e.keyCode] = false;
-    Tab.fourth.triggered = false;
-    console.log('Tab.fourth after keyup: '+Tab.fourth);
-    console.log(Tab.fourth);
-    console.log('Tab.fourth.triggered after keyup: '+Tab.fourth.triggered);
+  if (e.keyCode in Tab.fourth.keyBank) {
+    Tab.fourth.keyBank[e.keyCode] = false;
+    console.log('Tab.fourth.keyBank after keyup: '+Tab.fourth.keyBank);
+    console.log(Tab.fourth.keyBank);
   }
-  if (e.keyCode in Tab.fifth) {
-    Tab.fifth[e.keyCode] = false;
-    Tab.fifth.triggered = false;
-    console.log('Tab.fifth after keyup: '+Tab.fifth);
-    console.log(Tab.fifth);
-    console.log('Tab.fifth.triggered after keyup: '+Tab.fifth.triggered);
+  if (e.keyCode in Tab.fifth.keyBank) {
+    Tab.fifth.keyBank[e.keyCode] = false;
+    console.log('Tab.fifth.keyBank after keyup: '+Tab.fifth.keyBank);
+    console.log(Tab.fifth.keyBank);
   }
 });
 
 // IF mouse is clicked outside #whisper_outgoing...
 $(document).on('click', function(event) {
   // [ADDED] ONLY IF fadeout is set (5/6/14)
-  if (Tab.fadeout) {
+  if (Tab.options.fadeout.enabled == true) {
     // FOR INCOMING DIV
     if ($(event.target).parents().index($('.chat-div')) == -1) {
       if ($('.chat-div').is(":visible")) {

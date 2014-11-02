@@ -98,19 +98,20 @@ var Connector = {
   onRoster: function (iq) {
 
     console.log('onRoster triggered.');
+    console.log('Roster iq: ', iq);
 
     if (Connector.roster.length < 1) {
       $(iq).find('item').each(function () {
         var jid = $(this).attr('jid');
         var name = $(this).attr('name') || jid;
         // transform jid into an id
-        var jidID = Handler.convertJidToId(jid);
+        var jidNode = Strophe.getNodeFromJid(jid);
 
         // Build the Roster object to ship to options.js [10/17/14]
-        Connector.roster.push({ 'name': name, 'jid': jid, 'jidID': jidID });
+        Connector.roster.push({ 'name': name, 'jid': jid, 'jidNode': jidNode });
       });
 
-      console.log(Connector.roster);  
+      console.log('Completed roster: ', Connector.roster);  
     }
     
     var views = chrome.extension.getViews();
@@ -168,10 +169,19 @@ var Connector = {
     console.log('Message triggered: ', msg);
     var fullJID = $(msg).attr('from');
     console.log('Full JID: ' + fullJID);
-    var incomingJID = Strophe.getBareJidFromJid(fullJID);
-    console.log('JID: ' + incomingJID);
-    var jidID = Handler.convertJidToId(incomingJID);
+    var jid = Strophe.getBareJidFromJid(fullJID);
+    console.log('JID: ' + jid);
+    var jidNode = Strophe.getNodeFromJid(jid);
+    console.log('JID node: ' + jidNode);
+    var jidID = Handler.convertJidToId(jid);
     console.log('JID converted to ID: ' + jidID);
+
+    // Loop through roster to convert numerical JID node to real name [11/1/14]
+    for (var i=0; i<Connector.roster.length; ++i) {
+      if (jidNode == Connector.roster[i].jidNode) {
+        var name = Connector.roster[i].name;
+      }
+    }
 
     // IF INCOMING MESSAGE [10/30/14]
     var messageText = $(msg).children('body');
@@ -185,20 +195,30 @@ var Connector = {
       chrome.tabs.query({}, function(tabs) {
         for (var i=0; i<tabs.length; ++i) {
           chrome.tabs.sendMessage(tabs[i].id, {
-            'type': 'message',
+            'type': 'incomingMessage',
             'message': messageText,
-            'jid': incomingJID,
-            'fullJID': fullJID, 
-            'jidID': jidID
+            'jid': jid, 
+            'jidID': jidID,
+            'name': name
           });
         }
       });
     }
+
+    return true;
     
   },
 
   onMessageOutgoing: function (msg) {
+    // Construct the message xmlns
+    var message = $msg({
+      to: jid,
+      "type": "chat"
+    }).c('body').t(msg).up()
+      .c('active', {xmlns: "http://jabber.org/protocol/chatstates"});
 
+    // Send the message through Strophe
+    Connector.connection.send(message);
   },
 
   insertContact: function (elem) {
