@@ -34,6 +34,7 @@
   "content_scripts": [
     {
       "matches": [ "<all_urls>" ],
+      "exclude_matches": ["https://www.facebook.com/*"],
       "css": [
         "tab/tab.css"
       ],
@@ -41,7 +42,7 @@
         "lib/jquery-1.11.0.min.js",
         "tab/tab.js"
       ],
-      "run_at": "document_end",
+      "run_at": "document_idle",
       "all_frames": false
     }
   ]

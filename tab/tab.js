@@ -26,135 +26,132 @@ var Tab = {
 
 }
 
+// *********************************************************************************************** \\
+// *** TOOK BELOW SECTION OUT OF DOCUMENT.READY (DOM doesn't need to be ready for this to fire) *** \\
+// *********************************************************************************************** \\
+
+chrome.runtime.sendMessage({type: "requestStatus"}, function(response) {
+  console.log('Response from background:');
+  console.log('Type: ' + response.type); 
+  console.log('Status: ' + response.status);
+});
+
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+
+  // ******* MESSAGE RECEIVER ******* \\
+  if (request.type == "incomingMessage") {
+
+    var message = request.message;
+    var jid = request.jid;
+    var jidID = request.jidID;
+    var name = request.name;
+
+    console.log('Received message packet from message.js: ', request);
+    // ******************************************************************** \\
+    // ******* EVERYTHING BELOW SHOULD BE HANDLED BY CONTENT SCRIPT ******* \\
+    // ******************************************************************** \\
+
+    // IF CHAT BOX FOR SPECIFIED JID DOESN'T EXIST YET, MAKE ONE
+    if ($('#chat-'+jidID).length === 0) {
+      // add person div to master chat div
+      var personDiv = '<div id="chat-'+jidID+'" class="chat-div"></div>';
+      $('#chat-'+jidID).css({ "position": "absolute", "bottom": "0", "left": "0" });
+      console.log('Person div: '+personDiv);
+
+      $('body').append(personDiv);
+
+      console.log('#chat-jidID triggered.');
+    }
+
+    // give fullJID data to person div
+    $('#chat-'+jidID).data({'jid': jid, 'name': name});
+    console.log('jid data attached to #chat-jidID');
+    console.log($('#chat-'+jidID).data('jid'));
+
+    // IF MESSAGE EXISTS
+    if (message) {
+
+      // add the new message wrappers
+      $('#chat-'+jidID).append(
+        '<div class="chat-message whisper-text">' +
+        name +                              // <========= work on this next, this is prompting error [10/30/14]
+        ': <span class="chat-text"></span>' +
+        '</div>'
+      );
+      console.log('.chat-message and .chat-text appended.');
+
+      // add the actual new message text
+      $('#chat-'+jidID+' .chat-message:last .chat-text').append(message);
+      console.log('Message <span> appended to #chat-text.');
+      $('#chat-'+jidID).fadeIn('fast');
+
+      Tab.scrollChat(jidID);
+    }
+
+    // Incoming message fadeout detect
+    if (Tab.options.fadeout.enabled == true) {
+      var fadeout = setTimeout(function() {
+        $("#chat-"+jidID).fadeOut('fast');
+      }, Tab.options.fadeout.timespan);  
+    }
+
+    $('#chat-'+jidID).click(function() {
+      if (fadeout) {
+        clearTimeout(fadeout);  
+      }
+    });
+
+    // ******************************************************************** \\
+    // ******* EVERYTHING ABOVE SHOULD BE HANDLED BY CONTENT SCRIPT ******* \\
+    // ******************************************************************** \\
+
+  }
+
+  // ******* CONNECTION RECEIVER ******* \\
+  if (request.type == "connection") {
+
+    console.log('Received connection status from connection.js: ', request);
+    sendResponse({response: "success"});
+
+    // Add handler for when successfully connected [10/28/14]
+  }
+});
+
+// STORE ALL CHROME.STORAGE TO Whisper
+chrome.storage.sync.get(function (result) {
+  console.log('chrome.storage triggered.');
+  
+  localStorage.setItem('Tab', JSON.stringify(result));
+  // Tab['options'] = result; <== Tab is undefined within document.ready, saving to localStorage instead [11/2/14]
+  //console.log('Tab options saved: ', Tab.options);
+});
+
+// ************************************************************************************************ \\
+// *** TOOK ABOVE SECTION OUT OF DOCUMENT.READY (DOM doesn't need to be ready for this to fire) *** \\
+// ************************************************************************************************ \\
+
 $(document).ready(function() {
 
-  chrome.runtime.sendMessage({type: "requestStatus"}, function(response) {
-    console.log('Response from background:');
-    console.log('Type: ' + response.type); 
-    console.log('Status: ' + response.status);
-  });
+  window.Tab = JSON.parse(localStorage.getItem('Tab'));
+  console.log('Tab at window level: ', Tab);
 
-  chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+  Tab['convertJidToId'] = function (jid) {
+    return Strophe.getBareJidFromJid(jid)
+      .replace(/@/g, "-")
+      .replace(/\./g, "-");
+  }
 
-    // ******* MESSAGE RECEIVER ******* \\
-    if (request.type == "incomingMessage") {
+  Tab['scrollChat'] = function (jidID) {
+    // ORIGINAL Whisper \\
+    var height = $('#chat-'+jidID).scrollHeight;
+    $('#chat-'+jidID).scrollTop(height);
 
-      var message = request.message;
-      var jid = request.jid;
-      var jidID = request.jidID;
-      var name = request.name;
+    // MINE - VERSION 1 \\
+    // $('#chat-'+jidID+' :last-child').focus();
 
-      console.log('Received message packet from message.js: ', request);
-      // ******************************************************************** \\
-      // ******* EVERYTHING BELOW SHOULD BE HANDLED BY CONTENT SCRIPT ******* \\
-      // ******************************************************************** \\
-
-      // IF CHAT BOX FOR SPECIFIED JID DOESN'T EXIST YET, MAKE ONE
-      if ($('#chat-'+jidID).length === 0) {
-        // add person div to master chat div
-        var personDiv = '<div id="chat-'+jidID+'" class="chat-div"></div>';
-        $('#chat-'+jidID).css({ "position": "absolute", "bottom": "0", "left": "0" });
-        console.log('Person div: '+personDiv);
-
-        $('body').append(personDiv);
-
-        console.log('#chat-jidID triggered.');
-      }
-
-      // give fullJID data to person div
-      $('#chat-'+jidID).data({'jid': jid, 'name': name});
-      console.log('jid data attached to #chat-jidID');
-      console.log($('#chat-'+jidID).data('jid'));
-
-      // IF MESSAGE EXISTS
-      if (message) {
-
-        // add the new message wrappers
-        $('#chat-'+jidID).append(
-          '<div class="chat-message whisper-text">' +
-          name +                              // <========= work on this next, this is prompting error [10/30/14]
-          ': <span class="chat-text"></span>' +
-          '</div>'
-        );
-        console.log('.chat-message and .chat-text appended.');
-
-        // add the actual new message text
-        $('#chat-'+jidID+' .chat-message:last .chat-text').append(message);
-        console.log('Message <span> appended to #chat-text.');
-        $('#chat-'+jidID).fadeIn('fast');
-
-        Tab.scrollChat(jidID);
-      }
-
-      // Incoming message fadeout detect
-      if (Tab.options.fadeout.enabled == true) {
-        var fadeout = setTimeout(function() {
-          $("#chat-"+jidID).fadeOut('fast');
-        }, Tab.options.fadeout.timespan);  
-      }
-
-      $('#chat-'+jidID).click(function() {
-        if (fadeout) {
-          clearTimeout(fadeout);  
-        }
-      });
-
-      // ******************************************************************** \\
-      // ******* EVERYTHING ABOVE SHOULD BE HANDLED BY CONTENT SCRIPT ******* \\
-      // ******************************************************************** \\
-
-    }
-
-    // ******* CONNECTION RECEIVER ******* \\
-    if (request.type == "connection") {
-
-      console.log('Received connection status from connection.js: ', request);
-      sendResponse({response: "success"});
-
-      // Add handler for when successfully connected [10/28/14]
-    }
-  });
-
-  // STORE ALL CHROME.STORAGE TO Whisper
-  chrome.storage.sync.get(function (result) {
-    console.log('chrome.storage triggered.');
-    Tab['options'] = result;
-    console.log('Tab options saved: ', Tab.options);
-
-/* [DELETE] Saving result directly into Tab.options object [11/1/14]
-    // [EDITED] DRYless version of chrome.storage retrieval (5/13/14)
-    var array = ['onoff', 'first', 'second', 'third', 'fourth', 'fifth', 'timeout', 'fadeout']
-
-    for (var i=0; i<array.length; i++) {
-      if (result[array[i]+'_checkbox'] === true) {
-        console.log(array[i]+'_checkbox detected: '+result[array[i]+'_checkbox']);
-        if (result[array[i]]) {
-          console.log(array[i]+' detected.', result[array[i]]);
-          Tab[array[i]] = result[array[i]];
-          console.log('Tab.'+array[i]+': ', Tab[array[i]]);
-          if (result[array[i]+'_jid']) {
-            Tab[array[i]+'_jid'] = result[array[i]+'_jid'];
-            Tab[array[i]+'_name'] = result[array[i]+'_name'];
-            console.log('Whisper '+array[i]+'_jid: '+Tab[array[i]+'_jid']+' and '+array[i]+'_name: '+Tab[array[i]+'_name']);
-          }
-        }
-      }
-    }
-
-    // Retrieve Chrome storage data [11/1/14]
-    for (var x in result) {
-      // If option is enabled...
-      if (result[x].enabled == true) {
-
-        if (result[x] == 'fadeout') {
-
-        }
-
-      }
-    }
-*/
-
-  });
+    // MINE - VERSION 2 \\
+    // $('chat-'+jidID).lastChild.focus();
+  }
 
   // OUTGOING CHAT LISTENER
   $('#outgoing').on('keypress', function (ev) {
