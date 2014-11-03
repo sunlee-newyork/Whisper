@@ -33,6 +33,11 @@
 	color:rgb(79,79,79);
 	font-size:11px;
 	font-family:sans-serif;
+	font-weight: bold;
+}
+
+.chat-text {
+	font-weight: normal;
 }
 
 #whisper_outgoing {

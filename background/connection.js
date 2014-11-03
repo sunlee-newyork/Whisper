@@ -209,12 +209,12 @@ var Connector = {
     
   },
 
-  onMessageOutgoing: function (msg) {
+  onMessageOutgoing: function (body, jid) {
     // Construct the message xmlns
     var message = $msg({
       to: jid,
       "type": "chat"
-    }).c('body').t(msg).up()
+    }).c('body').t(body).up()
       .c('active', {xmlns: "http://jabber.org/protocol/chatstates"});
 
     // Send the message through Strophe

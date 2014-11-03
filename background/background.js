@@ -89,9 +89,9 @@ chrome.extension.onMessage.addListener(function (message, sender, sendResponse) 
   // OUTGOING MESSAGE LISTENER [11/1/14]
   if (message.type == 'outgoingMessage') {
     console.log('Outgoing message request received from tab.');
-    console.log('Message body: ' + request.body);
+    console.log('Message body: ' + message.body);
     sendResponse({type: 'success'});
-    Connector.onMessageOutgoing(request.body);
+    Connector.onMessageOutgoing(message.body, message.jid);
   }
 
 });

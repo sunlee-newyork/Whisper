@@ -2,161 +2,123 @@
 var outgoingDiv = "<div id='whisper_outgoing'><input id='outgoing' /></div>";
 $('body').append(outgoingDiv);
 
-var Tab = {
-
-  options: {},
-
-  convertJidToId: function (jid) {
-    return Strophe.getBareJidFromJid(jid)
-      .replace(/@/g, "-")
-      .replace(/\./g, "-");
-  },
-
-  scrollChat: function (jidID) {
-    // ORIGINAL Whisper \\
-    var height = $('#chat-'+jidID).scrollHeight;
-    $('#chat-'+jidID).scrollTop(height);
-
-    // MINE - VERSION 1 \\
-    // $('#chat-'+jidID+' :last-child').focus();
-
-    // MINE - VERSION 2 \\
-    // $('chat-'+jidID).lastChild.focus();
-  }
-
-}
-
-// *********************************************************************************************** \\
-// *** TOOK BELOW SECTION OUT OF DOCUMENT.READY (DOM doesn't need to be ready for this to fire) *** \\
-// *********************************************************************************************** \\
-
-chrome.runtime.sendMessage({type: "requestStatus"}, function(response) {
-  console.log('Response from background:');
-  console.log('Type: ' + response.type); 
-  console.log('Status: ' + response.status);
-});
-
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-
-  // ******* MESSAGE RECEIVER ******* \\
-  if (request.type == "incomingMessage") {
-
-    var message = request.message;
-    var jid = request.jid;
-    var jidID = request.jidID;
-    var name = request.name;
-
-    console.log('Received message packet from message.js: ', request);
-    // ******************************************************************** \\
-    // ******* EVERYTHING BELOW SHOULD BE HANDLED BY CONTENT SCRIPT ******* \\
-    // ******************************************************************** \\
-
-    // IF CHAT BOX FOR SPECIFIED JID DOESN'T EXIST YET, MAKE ONE
-    if ($('#chat-'+jidID).length === 0) {
-      // add person div to master chat div
-      var personDiv = '<div id="chat-'+jidID+'" class="chat-div"></div>';
-      $('#chat-'+jidID).css({ "position": "absolute", "bottom": "0", "left": "0" });
-      console.log('Person div: '+personDiv);
-
-      $('body').append(personDiv);
-
-      console.log('#chat-jidID triggered.');
-    }
-
-    // give fullJID data to person div
-    $('#chat-'+jidID).data({'jid': jid, 'name': name});
-    console.log('jid data attached to #chat-jidID');
-    console.log($('#chat-'+jidID).data('jid'));
-
-    // IF MESSAGE EXISTS
-    if (message) {
-
-      // add the new message wrappers
-      $('#chat-'+jidID).append(
-        '<div class="chat-message whisper-text">' +
-        name +                              // <========= work on this next, this is prompting error [10/30/14]
-        ': <span class="chat-text"></span>' +
-        '</div>'
-      );
-      console.log('.chat-message and .chat-text appended.');
-
-      // add the actual new message text
-      $('#chat-'+jidID+' .chat-message:last .chat-text').append(message);
-      console.log('Message <span> appended to #chat-text.');
-      $('#chat-'+jidID).fadeIn('fast');
-
-      Tab.scrollChat(jidID);
-    }
-
-    // Incoming message fadeout detect
-    if (Tab.options.fadeout.enabled == true) {
-      var fadeout = setTimeout(function() {
-        $("#chat-"+jidID).fadeOut('fast');
-      }, Tab.options.fadeout.timespan);  
-    }
-
-    $('#chat-'+jidID).click(function() {
-      if (fadeout) {
-        clearTimeout(fadeout);  
-      }
-    });
-
-    // ******************************************************************** \\
-    // ******* EVERYTHING ABOVE SHOULD BE HANDLED BY CONTENT SCRIPT ******* \\
-    // ******************************************************************** \\
-
-  }
-
-  // ******* CONNECTION RECEIVER ******* \\
-  if (request.type == "connection") {
-
-    console.log('Received connection status from connection.js: ', request);
-    sendResponse({response: "success"});
-
-    // Add handler for when successfully connected [10/28/14]
-  }
-});
-
-// STORE ALL CHROME.STORAGE TO Whisper
-chrome.storage.sync.get(function (result) {
-  console.log('chrome.storage triggered.');
-  
-  localStorage.setItem('Tab', JSON.stringify(result));
-  // Tab['options'] = result; <== Tab is undefined within document.ready, saving to localStorage instead [11/2/14]
-  //console.log('Tab options saved: ', Tab.options);
-});
-
-// ************************************************************************************************ \\
-// *** TOOK ABOVE SECTION OUT OF DOCUMENT.READY (DOM doesn't need to be ready for this to fire) *** \\
-// ************************************************************************************************ \\
-
 $(document).ready(function() {
 
+  // Store all chrome.storage to HTML5 localStorage [11/2/14]
+  chrome.storage.sync.get(function (result) {
+    console.log('chrome.storage triggered.');
+    // JSON.stringify result because localStorage can only handle key-value pairs for now [11/2/14]
+    localStorage.setItem('Tab', JSON.stringify(result));
+  });
+
+  // Save parsed localStorage as window-level object [11/2/14]
   window.Tab = JSON.parse(localStorage.getItem('Tab'));
   console.log('Tab at window level: ', Tab);
 
+  // Some additional functions saved to Tab object [11/2/14]
   Tab['convertJidToId'] = function (jid) {
-    return Strophe.getBareJidFromJid(jid)
+    return jid
       .replace(/@/g, "-")
       .replace(/\./g, "-");
   }
 
+/*
   Tab['scrollChat'] = function (jidID) {
-    // ORIGINAL Whisper \\
-    var height = $('#chat-'+jidID).scrollHeight;
-    $('#chat-'+jidID).scrollTop(height);
 
-    // MINE - VERSION 1 \\
-    // $('#chat-'+jidID+' :last-child').focus();
+    var elem = $('#chat-'+jidID);
+    elem.scrollTop = elem.scrollHeight;
 
-    // MINE - VERSION 2 \\
-    // $('chat-'+jidID).lastChild.focus();
   }
+*/
+
+  // Request connection status from background.js [11/2/14]
+  chrome.runtime.sendMessage({type: "requestStatus"}, function(response) {
+    console.log('Response from background:');
+    console.log('Type: ' + response.type); 
+    console.log('Status: ' + response.status);
+  });
+
+  // Listen for incoming message from connection.js [11/2/14]
+  chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+
+    // ******* MESSAGE RECEIVER ******* \\
+    if (request.type == "incomingMessage") {
+
+      var message = request.message;
+      var jid = request.jid;
+      var jidID = request.jidID;
+      var name = request.name;
+
+      console.log('Received message packet from message.js: ', request);
+
+      // IF CHAT BOX FOR SPECIFIED JID DOESN'T EXIST YET, MAKE ONE
+      if ($('#chat-'+jidID).length === 0) {
+        // add person div to master chat div
+        var personDiv = '<div id="chat-'+jidID+'" class="chat-div"><div class="chat-text-wrapper"></div></div>';
+        console.log('Person div: '+personDiv);
+
+        $('body').append(personDiv);
+
+        console.log('#chat-jidID triggered.');
+      }
+
+/* Don't think i need this [11/2/14]
+      // give fullJID data to person div
+      $('#chat-'+jidID).data({'jid': jid, 'name': name});
+      console.log('jid data attached to #chat-jidID');
+      console.log($('#chat-'+jidID).data('jid'));
+*/
+
+      // IF MESSAGE EXISTS
+      if (message) {
+
+        // add the new message wrappers
+        $('#chat-'+jidID+' .chat-text-wrapper').append(
+          '<div class="chat-message whisper-text">' +
+          name +                              // <========= work on this next, this is prompting error [10/30/14]
+          ': <span class="chat-text"></span>' +
+          '</div>'
+        );
+        console.log('.chat-message and .chat-text appended.');
+
+        // add the actual new message text
+        $('#chat-'+jidID+' .chat-message:last .chat-text').append(message);
+        console.log('Message <span> appended to #chat-text.');
+        $('#chat-'+jidID).fadeIn('fast', function () {
+          var elem = $('#chat-'+jidID);
+          elem.scrollTop = elem.scrollHeight;  
+        });
+      }
+
+      // Incoming message fadeout detect
+      if (Tab.fadeout.enabled == true) {
+        var fadeout = setTimeout(function() {
+          $("#chat-"+jidID).fadeOut('fast');
+        }, Tab.fadeout.timespan);  
+      }
+
+      // If user clicks incoming message <div>, cancel the fadeout [11/2/14]
+      $('#chat-'+jidID).click(function() {
+        if (fadeout) {
+          clearTimeout(fadeout);  
+        }
+      });
+
+    }
+
+    // ******* CONNECTION RECEIVER ******* \\
+    if (request.type == "connection") {
+
+      console.log('Received connection status from connection.js: ', request);
+      sendResponse({response: "success"});
+
+      // Add handler for when successfully connected [10/28/14]
+    }
+  });
 
   // OUTGOING CHAT LISTENER
   $('#outgoing').on('keypress', function (ev) {
-    //var jid = (Strophe.getBareJidFromJid('-100008213824782@chat.facebook.com')); // change this later
-    //var jid_id = Tab.convertJidToId(jid); // change this later
+
     var friend = $(this).attr('data-friend');
     switch (friend) {
       case 'first': var jid = Tab.first.jid;
@@ -171,8 +133,8 @@ $(document).ready(function() {
       break;
     }
     console.log('JID: '+jid);
-    var jid_id = Tab.convertJidToId(jid);
-    console.log('Jid_id: '+jid_id);
+    var jidID = Tab.convertJidToId(jid);
+    console.log('JidID: '+jidID);
 
     // IF 'enter' is pressed...
     if (ev.which === 13) {
@@ -182,23 +144,24 @@ $(document).ready(function() {
       // Get the outgoing message text
       var body = $(this).val();
 
-      chrome.runtime.sendMessage({type: "outgoingMessage", body: body}, function(response) {
+      chrome.runtime.sendMessage({type: "outgoingMessage", body: body, jid: jid}, function(response) {
         console.log('Response from background: ' + response);
       });
 
       // Originally sent message via Strophe directly here, moved to connection.js [11/1/14]
 
       // Find the corresponding incoming message div
-      $('#chat-'+jid_id).append( // #chat-jid_id => change this later
-        '<div class="chat-message">Me: <span class="chat-text">' + body + "</span></div>"
+      $('#chat-'+jidID+' .chat-text-wrapper').append(
+        '<div class="chat-message whisper-text">Me: <span class="chat-text">' + body + "</span></div>"
       );
 
-      Tab.scrollChat(jid_id);
+      var elem = $('#chat-'+jidID);
+      elem.scrollTop = elem.scrollHeight;
 
       // Not sure what this does
       $(this).val('');
       // After sending, 
-      $('#chat-'+jid_id).data('composing', false); // #chat-jid_id => change this later
+      $('#chat-'+jidID).data('composing', false); // #chat-jidID => change this later
 /*
     } 
       // NOT WORKINGGGGGG
@@ -208,8 +171,10 @@ $(document).ready(function() {
 */
 
     } else { // ELSE if 'enter' is not pressed yet...
-      var composing = $('#chat-'+jid_id).data('composing');
+      var composing = $('#chat-'+jidID).data('composing');
       if (!composing) {
+
+        chrome.runtime.sendMessage({type: "composing"})
         var notify = $msg({
           to: jid,
           "type": "chat"
@@ -217,7 +182,7 @@ $(document).ready(function() {
 
         Tab.connection.send(notify);
 
-        $('#chat-'+jid_id).data('composing', true);
+        // $('#chat-'+jidID).data('composing', true); // <== don't need this UX-wise [11/2/14]
       }
     }
   });
@@ -232,25 +197,25 @@ $(window).keydown(function (e) {
   if (e.keyCode in Tab.first.keyBank) {
     
     Tab.first.keyBank[e.keyCode] = true;
-    var first_counter = 0;
+    var firstCounter = 0;
 
     for (var x in Tab.first.keyBank) {
       if (Tab.first.keyBank[x] == true) {
-        first_counter = first_counter + 1;
-        console.log('First_counter: '+first_counter);
+        firstCounter = firstCounter + 1;
+        console.log('FirstCounter: '+firstCounter);
       }
     }
 
     console.log(Tab.first.keyBank);
 
     // FIRE EVENT
-    if (first_counter === 3) {
+    if (firstCounter === 3) {
       console.log('Hotkeys for '+Tab.first.name+' pressed.');
       $('#whisper_outgoing').show();
-      var jid_id = Tab.convertJidToId(Tab.first.jid); 
-      console.log('Jid_id: '+jid_id);
+      var jidID = Tab.convertJidToId(Tab.first.jid); 
+      console.log('JidID: '+jidID);
       // [DELETE] $('#whisper_incoming').show(); (5/6/14)
-      $('#chat-'+jid_id).show();
+      $('#chat-'+jidID).show();
       setTimeout(function() {
         $('#outgoing').focus();
         $('#outgoing').attr('data-friend', 'first'); // <=====
@@ -261,22 +226,22 @@ $(window).keydown(function (e) {
   if (e.keyCode in Tab.second.keyBank) {
     
     Tab.second.keyBank[e.keyCode] = true;
-    var second_counter = 0;
+    var secondCounter = 0;
 
     for (var x in Tab.second.keyBank) {
       if (Tab.second.keyBank[x] == true) {
-        second_counter = second_counter + 1;
+        secondCounter = secondCounter + 1;
       }
     }
 
     console.log(Tab.second.keyBank);
 
     // FIRE EVENT
-    if (second_counter === 3) { 
+    if (secondCounter === 3) { 
       console.log('Hotkeys for '+Tab.second.name+' pressed.');
       $('#whisper_outgoing').show();
-      var jid_id = Tab.convertJidToId(Tab.second.jid); 
-      $('#chat-'+jid_id).show();
+      var jidID = Tab.convertJidToId(Tab.second.jid); 
+      $('#chat-'+jidID).show();
       setTimeout(function() {
         $('#outgoing').focus();
         $('#outgoing').attr('data-friend', 'second');
@@ -286,22 +251,22 @@ $(window).keydown(function (e) {
   if (e.keyCode in Tab.third.keyBank) {
     
     Tab.third.keyBank[e.keyCode] = true;
-    var third_counter = 0;
+    var thirdCounter = 0;
 
     for (var x in Tab.third.keyBank) {
       if (Tab.third.keyBank[x] == true) {
-        third_counter = third_counter + 1;
+        thirdCounter = thirdCounter + 1;
       }
     }
 
     console.log(Tab.third.keyBank);
 
     // FIRE EVENT
-    if (third_counter === 3) { 
+    if (thirdCounter === 3) { 
       console.log('Hotkeys for '+Tab.third.name+' pressed.');
       $('#whisper_outgoing').show();
-      var jid_id = Tab.convertJidToId(Tab.third.jid); 
-      $('#chat-'+jid_id).show();
+      var jidID = Tab.convertJidToId(Tab.third.jid); 
+      $('#chat-'+jidID).show();
       setTimeout(function() {
         $('#outgoing').focus();
         $('#outgoing').attr('data-friend', 'third');
@@ -311,22 +276,22 @@ $(window).keydown(function (e) {
   if (e.keyCode in Tab.fourth.keyBank) {
     
     Tab.fourth.keyBank[e.keyCode] = true;
-    var fourth_counter = 0;
+    var fourthCounter = 0;
 
     for (var x in Tab.fourth.keyBank) {
       if (Tab.fourth.keyBank[x] == true) {
-        fourth_counter = fourth_counter + 1;
+        fourthCounter = fourthCounter + 1;
       }
     }
 
     console.log(Tab.fourth.keyBank);
 
     // FIRE EVENT
-    if (fourth_counter === 3) { 
+    if (fourthCounter === 3) { 
       console.log('Hotkeys for '+Tab.fourth.name+' pressed.');
       $('#whisper_outgoing').show();
-      var jid_id = Tab.convertJidToId(Tab.fourth.jid); 
-      $('#chat-'+jid_id).show();
+      var jidID = Tab.convertJidToId(Tab.fourth.jid); 
+      $('#chat-'+jidID).show();
       setTimeout(function() {
         $('#outgoing').focus();
         $('#outgoing').attr('data-friend', 'fourth');
@@ -336,22 +301,22 @@ $(window).keydown(function (e) {
   if (e.keyCode in Tab.fifth.keyBank) {
     
     Tab.fifth.keyBank[e.keyCode] = true;
-    var fifth_counter = 0;
+    var fifthCounter = 0;
 
     for (var x in Tab.fifth.keyBank) {
       if (Tab.fifth.keyBank[x] == true) {
-        fifth_counter = fifth_counter + 1; 
+        fifthCounter = fifthCounter + 1; 
       }
     }
 
     console.log(Tab.fifth.keyBank);
 
     // FIRE EVENT
-    if (fifth_counter === 3) { 
+    if (fifthCounter === 3) { 
       console.log('Hotkeys for '+Tab.fifth.name+' pressed.');
       $('#whisper_outgoing').show();
-      var jid_id = Tab.convertJidToId(Tab.fifth.jid); 
-      $('#chat-'+jid_id).show();
+      var jidID = Tab.convertJidToId(Tab.fifth.jid); 
+      $('#chat-'+jidID).show();
       setTimeout(function() {
         $('#outgoing').focus();
         $('#outgoing').attr('data-friend', 'fifth');
@@ -388,8 +353,11 @@ $(window).keydown(function (e) {
 
 // IF mouse is clicked outside #whisper_outgoing...
 $(document).on('click', function(event) {
+
+  var Tab = JSON.parse(localStorage.getItem('Tab'));
+
   // [ADDED] ONLY IF fadeout is set (5/6/14)
-  if (Tab.options.fadeout.enabled == true) {
+  if (Tab.fadeout.enabled == true) {
     // FOR INCOMING DIV
     if ($(event.target).parents().index($('.chat-div')) == -1) {
       if ($('.chat-div').is(":visible")) {
