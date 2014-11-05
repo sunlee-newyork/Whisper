@@ -94,5 +94,29 @@ chrome.extension.onMessage.addListener(function (message, sender, sendResponse) 
     Connector.onMessageOutgoing(message.body, message.jid);
   }
 
+  // COMPOSING LISTENER [11/4/14]
+  if (message.type == 'composing') {
+    console.log('Composing request received from tab.');
+    sendResponse({type: 'success'});
+    var notify = $msg({
+      to: message.jid,
+      "type": "chat"
+    }).c('composing', {xmlns: "http://jabber.org/protocol/chatstates"});
+
+    Connector.connection.send(notify);
+  }
+
+  // COMPOSING PAUSE LISTENER [11/4/14]
+  if (message.type == 'paused') {
+    console.log('Composing paused reuquest received from tab.');
+    sendResponse({type: 'success'});
+    var notify = $msg({
+      to: message.jid,
+      "type": "chat"
+    }).c('paused', {xmlns: "http://jabber.org/protocol/chatstates"});
+
+    Connector.connection.send(notify);
+  }
+
 });
 

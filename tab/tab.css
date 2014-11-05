@@ -19,6 +19,11 @@
 	display:none;
 }
 
+.chat-text-wrapper {
+	-webkit-transition: margin 0.5s;
+	transition: margin 0.5s;
+}
+
 .chat-event {
 	height:17px;
 	line-height:17px;

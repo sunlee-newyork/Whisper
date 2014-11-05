@@ -75,7 +75,7 @@ $(document).ready(function() {
         // add the new message wrappers
         $('#chat-'+jidID+' .chat-text-wrapper').append(
           '<div class="chat-message whisper-text">' +
-          name +                              // <========= work on this next, this is prompting error [10/30/14]
+          name +
           ': <span class="chat-text"></span>' +
           '</div>'
         );
@@ -84,10 +84,18 @@ $(document).ready(function() {
         // add the actual new message text
         $('#chat-'+jidID+' .chat-message:last .chat-text').append(message);
         console.log('Message <span> appended to #chat-text.');
-        $('#chat-'+jidID).fadeIn('fast', function () {
-          var elem = $('#chat-'+jidID);
-          elem.scrollTop = elem.scrollHeight;  
-        });
+        
+        $('#chat-'+jidID).fadeIn('fast').animate({ scrollTop: $('#chat-'+jidID+' .chat-text-wrapper').scrollHeight }, function() {console.log('Animate callback');});
+
+        //$('#chat-'+jidID).fadeIn('fast', function () {
+          //$('#chat-'+jidID).animate({ scrollTop: $('#chat-'+jidID+' .chat-text-wrapper').scrollHeight }, function() {console.log('Animate callback');});    
+        //});  
+        
+
+        //var outerDiv = $('#chat-'+jidID);
+        //var innerDiv = $('#chat-'+jidID+' .chat-text-wrapper');
+        
+
       }
 
       // Incoming message fadeout detect
@@ -114,12 +122,14 @@ $(document).ready(function() {
 
       // Add handler for when successfully connected [10/28/14]
     }
+
   });
 
   // OUTGOING CHAT LISTENER
   $('#outgoing').on('keypress', function (ev) {
 
     var friend = $(this).attr('data-friend');
+
     switch (friend) {
       case 'first': var jid = Tab.first.jid;
       break;
@@ -132,6 +142,7 @@ $(document).ready(function() {
       case 'fifth': var jid = Tab.fifth.jid;
       break;
     }
+
     console.log('JID: '+jid);
     var jidID = Tab.convertJidToId(jid);
     console.log('JidID: '+jidID);
@@ -145,54 +156,83 @@ $(document).ready(function() {
       var body = $(this).val();
 
       chrome.runtime.sendMessage({type: "outgoingMessage", body: body, jid: jid}, function(response) {
-        console.log('Response from background: ' + response);
+        console.log('Response from background: ', response);
       });
 
       // Originally sent message via Strophe directly here, moved to connection.js [11/1/14]
 
       // Find the corresponding incoming message div
+      var incomingDiv = $('#chat-'+jidID);
+      
+      if (!incomingDiv) {
+        $('body').append('<div id="chat-'+jidID+'" class="chat-div"><div class="chat-text-wrapper"></div></div>');
+      }
+
       $('#chat-'+jidID+' .chat-text-wrapper').append(
-        '<div class="chat-message whisper-text">Me: <span class="chat-text">' + body + "</span></div>"
-      );
+        '<div class="chat-message whisper-text">Me: <span class="chat-text">' + body + '</span></div>'
+      ).parent().animate({ scrollTop: $('#chat-'+jidID+' .chat-text-wrapper').scrollHeight }, function() {console.log('Animate callback');});
 
-      var elem = $('#chat-'+jidID);
-      elem.scrollTop = elem.scrollHeight;
+      //console.log('Outer div: ', $('#chat-'+jidID));
+      //console.log('Inner div: ', $('#chat-'+jidID+' .chat-text-wrapper'));
 
-      // Not sure what this does
+      //$('#chat-'+jidID).animate({ scrollTop: $('#chat-'+jidID+' .chat-text-wrapper').scrollHeight }, function() {console.log('Animate callback');});
+      // $('#chat-'+jidID+' .chat-text-wrapper').css('margin-bottom', 0);
+      // elem.scrollTop = elem.scrollHeight;
+
+      // Empty out outgoing input field after message send
       $(this).val('');
       // After sending, 
-      $('#chat-'+jidID).data('composing', false); // #chat-jidID => change this later
-/*
-    } 
-      // NOT WORKINGGGGGG
-      else if (ev.which === 27) { // ELSE IF 'ESC' is pressed...
-      console.log('"ESC" pressed/detected.');
-      $('#whisper_outgoing').fadeOut('fast');
-*/
+      //$('#chat-'+jidID).data('composing', false); // #chat-jidID => change this later
 
     } else { // ELSE if 'enter' is not pressed yet...
-      var composing = $('#chat-'+jidID).data('composing');
-      if (!composing) {
-
-        chrome.runtime.sendMessage({type: "composing"})
-        var notify = $msg({
-          to: jid,
-          "type": "chat"
-        }).c('composing', {xmlns: "http://jabber.org/protocol/chatstates"});
-
-        Tab.connection.send(notify);
-
-        // $('#chat-'+jidID).data('composing', true); // <== don't need this UX-wise [11/2/14]
-      }
+      
+      chrome.runtime.sendMessage({type: "composing", jid: jid});
+      
     }
+
+  });
+
+  $('#outgoing').on('keyup', function () {
+
+    var friend = $(this).attr('data-friend');
+
+    switch (friend) {
+      case 'first': var jid = Tab.first.jid;
+      break;
+      case 'second': var jid = Tab.second.jid;
+      break;
+      case 'third': var jid = Tab.third.jid;
+      break;
+      case 'fourth': var jid = Tab.fourth.jid;
+      break;
+      case 'fifth': var jid = Tab.fifth.jid;
+      break;
+    }
+
+    if ($(this).val().length == 0) {
+      chrome.runtime.sendMessage({type: "paused", jid: jid});
+    }
+
   });
 
 });
 
-// INSTEAD OF ^, GET KEYCODES FROM Whisper
+
+// **************************** \\
+// ***** HOTKEY DETECTION ***** \\
+// **************************** \\
+
 $(window).keydown(function (e) {
+
   console.log('Keydown triggered.');
   console.log(e.keyCode);
+
+  // ESC detection [11/4/14]
+  if (e.which === 27) {
+    console.log('"ESC" pressed/detected.');
+    $('#whisper_outgoing').fadeOut('fast');
+    $('.chat-div').fadeOut('fast');
+  }
 
   if (e.keyCode in Tab.first.keyBank) {
     
@@ -220,8 +260,10 @@ $(window).keydown(function (e) {
         $('#outgoing').focus();
         $('#outgoing').attr('data-friend', 'first'); // <=====
       }, 20);
-    }   
+    }  
+
   }
+
   // NEED TO FILL REST OF FRIENDS
   if (e.keyCode in Tab.second.keyBank) {
     
@@ -247,7 +289,9 @@ $(window).keydown(function (e) {
         $('#outgoing').attr('data-friend', 'second');
       }, 20);
     }   
+
   }
+
   if (e.keyCode in Tab.third.keyBank) {
     
     Tab.third.keyBank[e.keyCode] = true;
@@ -272,7 +316,9 @@ $(window).keydown(function (e) {
         $('#outgoing').attr('data-friend', 'third');
       }, 20);
     }   
+
   }
+
   if (e.keyCode in Tab.fourth.keyBank) {
     
     Tab.fourth.keyBank[e.keyCode] = true;
@@ -296,8 +342,10 @@ $(window).keydown(function (e) {
         $('#outgoing').focus();
         $('#outgoing').attr('data-friend', 'fourth');
       }, 20);
-    }   
+    } 
+
   }
+
   if (e.keyCode in Tab.fifth.keyBank) {
     
     Tab.fifth.keyBank[e.keyCode] = true;
@@ -321,8 +369,10 @@ $(window).keydown(function (e) {
         $('#outgoing').focus();
         $('#outgoing').attr('data-friend', 'fifth');
       }, 20);
-    }   
+    } 
+
   }
+
 }).keyup(function (e) {
   if (e.keyCode in Tab.first.keyBank) {
     Tab.first.keyBank[e.keyCode] = false;
@@ -374,4 +424,5 @@ $(document).on('click', function(event) {
       $('#whisper_outgoing').fadeOut('fast');
     }
   }
+
 });
