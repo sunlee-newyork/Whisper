@@ -82,23 +82,15 @@ $(document).ready(function() {
         console.log('.chat-message and .chat-text appended.');
 
         // add the actual new message text
-        $('#chat-'+jidID+' .chat-message:last .chat-text').append(message);
-        console.log('Message <span> appended to #chat-text.');
+        $('#chat-'+jidID+' .chat-message:last .chat-text').append(message);        
         
-        $('#chat-'+jidID).fadeIn('fast').animate({ scrollTop: $('#chat-'+jidID+' .chat-text-wrapper').scrollHeight }, function() {console.log('Animate callback');});
-
-        //$('#chat-'+jidID).fadeIn('fast', function () {
-          //$('#chat-'+jidID).animate({ scrollTop: $('#chat-'+jidID+' .chat-text-wrapper').scrollHeight }, function() {console.log('Animate callback');});    
-        //});  
-        
-
-        //var outerDiv = $('#chat-'+jidID);
-        //var innerDiv = $('#chat-'+jidID+' .chat-text-wrapper');
-        
+        // AUTO SCROLLER, FINALLY [11/8/2014 5:51PM]
+        var chatDiv = $('#chat-'+jidID);
+        chatDiv.fadeIn('fast').animate({scrollTop: chatDiv[0].scrollHeight});
 
       }
 
-      // Incoming message fadeout detect
+      // Incoming message fadeout detect      
       if (Tab.fadeout.enabled == true) {
         var fadeout = setTimeout(function() {
           $("#chat-"+jidID).fadeOut('fast');
@@ -149,43 +141,53 @@ $(document).ready(function() {
 
     // IF 'enter' is pressed...
     if (ev.which === 13) {
+
       console.log('"Enter" pressed/detected.');
       ev.preventDefault();
 
       // Get the outgoing message text
       var body = $(this).val();
 
+      // Send message packet to connection.js
       chrome.runtime.sendMessage({type: "outgoingMessage", body: body, jid: jid}, function(response) {
         console.log('Response from background: ', response);
       });
-
-      // Originally sent message via Strophe directly here, moved to connection.js [11/1/14]
-
-      // Find the corresponding incoming message div
-      var incomingDiv = $('#chat-'+jidID);
       
-      if (!incomingDiv) {
+      // If chat div doesn't exist yet...
+      if ($('#chat-'+jidID).length < 1) {
+        // Add the outgoing message
         $('body').append('<div id="chat-'+jidID+'" class="chat-div"><div class="chat-text-wrapper"></div></div>');
       }
 
+      // Add the outgoing message to the chat div
       $('#chat-'+jidID+' .chat-text-wrapper').append(
         '<div class="chat-message whisper-text">Me: <span class="chat-text">' + body + '</span></div>'
-      ).parent().animate({ scrollTop: $('#chat-'+jidID+' .chat-text-wrapper').scrollHeight }, function() {console.log('Animate callback');});
+      );
 
-      //console.log('Outer div: ', $('#chat-'+jidID));
-      //console.log('Inner div: ', $('#chat-'+jidID+' .chat-text-wrapper'));
+      // AUTO SCROLL, OH YEA
+      var chatDiv = $('#chat-'+jidID);
+      chatDiv.fadeIn('fast').animate({scrollTop: chatDiv[0].scrollHeight});  
+    
+      // Message fadeout detect
+      if (Tab.fadeout.enabled == true) {
+        var fadeout = setTimeout(function() {
+          $("#chat-"+jidID).fadeOut('fast');
+        }, Tab.fadeout.timespan);  
+      }
 
-      //$('#chat-'+jidID).animate({ scrollTop: $('#chat-'+jidID+' .chat-text-wrapper').scrollHeight }, function() {console.log('Animate callback');});
-      // $('#chat-'+jidID+' .chat-text-wrapper').css('margin-bottom', 0);
-      // elem.scrollTop = elem.scrollHeight;
+      // If user clicks message <div>, cancel the fadeout [11/2/14]
+      $('#chat-'+jidID).click(function() {
+        if (fadeout) {
+          clearTimeout(fadeout);  
+        }
+      });
 
       // Empty out outgoing input field after message send
       $(this).val('');
-      // After sending, 
-      //$('#chat-'+jidID).data('composing', false); // #chat-jidID => change this later
-
+      
     } else { // ELSE if 'enter' is not pressed yet...
       
+      // Send the 'composing' status
       chrome.runtime.sendMessage({type: "composing", jid: jid});
       
     }
@@ -209,7 +211,9 @@ $(document).ready(function() {
       break;
     }
 
+    // If user backspaces completely...
     if ($(this).val().length == 0) {
+      // Remove the 'composing' status
       chrome.runtime.sendMessage({type: "paused", jid: jid});
     }
 
