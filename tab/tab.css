@@ -45,7 +45,7 @@
 	font-weight: normal;
 }
 
-#whisper_outgoing {
+#whisper-outgoing {
 	z-index:10000;
 	position:fixed;
 	width:475px;
@@ -59,7 +59,7 @@
 	display:none;
 }
 
-#whisper_outgoing::-webkit-scrollbar {
+#whisper-outgoing::-webkit-scrollbar {
 	display:none;
 }
 

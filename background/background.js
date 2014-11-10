@@ -41,7 +41,8 @@ var Handler = {
   roster: null,
 
   login: function(user, pass) {
-    Connector.connection = new Strophe.Connection('http://0.0.0.0:5280/http-bind/');
+    Connector.connection = new Strophe.Connection('http://ec2-54-165-228-172.compute-1.amazonaws.com:5280/http-bind/');
+    // Jack BOSH server => http://bosh.metajack.im:5280/xmpp-httpbind
 
     Connector.connection.connect(user+'@chat.facebook.com', pass, Connector.onConnect);
   },
@@ -53,14 +54,6 @@ var Handler = {
   }
 
 }
-
-/* [FIX] Change this to send message div variables (5/15/14)
-chrome.tabs.onCreated.addListener(function (tab) {
-  chrome.tabs.sendMessage(tab.id, BG, function (response) {
-    console.log('sendMessage response: '+response);
-  });
-});
-*/
 
 /* ======================================================================
 =                           MESSAGE LISTENERS                           =

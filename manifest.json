@@ -25,7 +25,6 @@
       "lib/jquery-1.11.0.min.js",
       "lib/strophe.js",
       "background/connection.js",
-      "background/message.js",
       "background/background.js"
     ],
     "persistent": true

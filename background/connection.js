@@ -32,12 +32,13 @@ var Connector = {
       console.log('Connected.');
       Connector.status = 5;
       Connector.onConnected();
-      var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});      
-      Connector.connection.sendIQ(iq, Connector.onRoster);
+      //var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});      
+      Connector.connection.sendIQ($iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'}), Connector.onRoster);
       var rosterHandler = Connector.connection.addHandler(Connector.onRosterChanged, "jabber:iq:roster", "iq", "set");
       console.log('onRosterChanged handler return value: ', rosterHandler);
       var messageHandler = Connector.connection.addHandler(Connector.onMessageIncoming, null, "message", "chat");
-      console.log('onMessageIncoming handler return value: ', messageHandler);
+      console.log('onMessageIncoming handler return value: ', messageHandler);      
+      Connector.connection.addHandler(Connector.onPing, 'urn:xmpp:ping', 'iq'); 
     } else if (status === Strophe.Status.DISCONNECTING) {
       console.log('Disconnecting initiated...');
       Connector.status = 7;
@@ -47,13 +48,24 @@ var Connector = {
       Connector.onDisconnected();
     } else if (status === Strophe.Status.ATTACHED) {
       this.status = 8;
-      var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});
-      Connector.connection.sendIQ(iq, this.onRoster);
+      //var iq = $iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'});
+      Connector.connection.sendIQ($iq({type: 'get'}).c('query', {xmlns: 'jabber:iq:roster'}), this.onRoster);
       Connector.connection.addHandler(Connector.onRosterChanged, "jabber:iq:roster", "iq", "set");
       console.log('Session attached.');
     }
 
     Connector.sendStatus();
+  },
+
+  onPing: function(iq) {
+    var pong = $iq({
+      to: $(iq).attr('from'),
+      type: "result",
+      id: $(iq).attr('id')
+    });
+    Connector.connection.send(pong);
+    console.log('Ponged back: ', pong);
+    return true;
   },
 
   sendStatus: function () {
@@ -98,7 +110,6 @@ var Connector = {
   onRoster: function (iq) {
 
     console.log('onRoster triggered.');
-    console.log('Roster iq: ', iq);
 
     if (Connector.roster.length < 1) {
       $(iq).find('item').each(function () {
@@ -110,8 +121,6 @@ var Connector = {
         // Build the Roster object to ship to options.js [10/17/14]
         Connector.roster.push({ 'name': name, 'jid': jid, 'jidNode': jidNode });
       });
-
-      console.log('Completed roster: ', Connector.roster);  
     }
     
     var views = chrome.extension.getViews();

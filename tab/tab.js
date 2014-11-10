@@ -1,6 +1,6 @@
 // INJECT OUTGOING CHAT BOX DIV
-var outgoingDiv = "<div id='whisper_outgoing'><input id='outgoing' /></div>";
-$('body').append(outgoingDiv);
+$('body').append("<div id='whisper-outgoing'><input id='outgoing' /></div>").append("<span id='connection-status'></span>");
+
 
 $(document).ready(function() {
 
@@ -21,15 +21,6 @@ $(document).ready(function() {
       .replace(/@/g, "-")
       .replace(/\./g, "-");
   }
-
-/*
-  Tab['scrollChat'] = function (jidID) {
-
-    var elem = $('#chat-'+jidID);
-    elem.scrollTop = elem.scrollHeight;
-
-  }
-*/
 
   // Request connection status from background.js [11/2/14]
   chrome.runtime.sendMessage({type: "requestStatus"}, function(response) {
@@ -61,13 +52,6 @@ $(document).ready(function() {
 
         console.log('#chat-jidID triggered.');
       }
-
-/* Don't think i need this [11/2/14]
-      // give fullJID data to person div
-      $('#chat-'+jidID).data({'jid': jid, 'name': name});
-      console.log('jid data attached to #chat-jidID');
-      console.log($('#chat-'+jidID).data('jid'));
-*/
 
       // IF MESSAGE EXISTS
       if (message) {
@@ -234,7 +218,7 @@ $(window).keydown(function (e) {
   // ESC detection [11/4/14]
   if (e.which === 27) {
     console.log('"ESC" pressed/detected.');
-    $('#whisper_outgoing').fadeOut('fast');
+    $('#whisper-outgoing').fadeOut('fast');
     $('.chat-div').fadeOut('fast');
   }
 
@@ -255,7 +239,7 @@ $(window).keydown(function (e) {
     // FIRE EVENT
     if (firstCounter === 3) {
       console.log('Hotkeys for '+Tab.first.name+' pressed.');
-      $('#whisper_outgoing').show();
+      $('#whisper-outgoing').show();
       var jidID = Tab.convertJidToId(Tab.first.jid); 
       console.log('JidID: '+jidID);
       // [DELETE] $('#whisper_incoming').show(); (5/6/14)
@@ -285,7 +269,7 @@ $(window).keydown(function (e) {
     // FIRE EVENT
     if (secondCounter === 3) { 
       console.log('Hotkeys for '+Tab.second.name+' pressed.');
-      $('#whisper_outgoing').show();
+      $('#whisper-outgoing').show();
       var jidID = Tab.convertJidToId(Tab.second.jid); 
       $('#chat-'+jidID).show();
       setTimeout(function() {
@@ -312,7 +296,7 @@ $(window).keydown(function (e) {
     // FIRE EVENT
     if (thirdCounter === 3) { 
       console.log('Hotkeys for '+Tab.third.name+' pressed.');
-      $('#whisper_outgoing').show();
+      $('#whisper-outgoing').show();
       var jidID = Tab.convertJidToId(Tab.third.jid); 
       $('#chat-'+jidID).show();
       setTimeout(function() {
@@ -339,7 +323,7 @@ $(window).keydown(function (e) {
     // FIRE EVENT
     if (fourthCounter === 3) { 
       console.log('Hotkeys for '+Tab.fourth.name+' pressed.');
-      $('#whisper_outgoing').show();
+      $('#whisper-outgoing').show();
       var jidID = Tab.convertJidToId(Tab.fourth.jid); 
       $('#chat-'+jidID).show();
       setTimeout(function() {
@@ -366,7 +350,7 @@ $(window).keydown(function (e) {
     // FIRE EVENT
     if (fifthCounter === 3) { 
       console.log('Hotkeys for '+Tab.fifth.name+' pressed.');
-      $('#whisper_outgoing').show();
+      $('#whisper-outgoing').show();
       var jidID = Tab.convertJidToId(Tab.fifth.jid); 
       $('#chat-'+jidID).show();
       setTimeout(function() {
@@ -405,7 +389,7 @@ $(window).keydown(function (e) {
   }
 });
 
-// IF mouse is clicked outside #whisper_outgoing...
+// IF mouse is clicked outside #whisper-outgoing...
 $(document).on('click', function(event) {
 
   var Tab = JSON.parse(localStorage.getItem('Tab'));
@@ -422,10 +406,10 @@ $(document).on('click', function(event) {
   }
 
   // FOR OUTGOING DIV
-  if ($(event.target).parents().index($('#whisper_outgoing')) == -1) {
-    if ($('#whisper_outgoing').is(":visible")) {
+  if ($(event.target).parents().index($('#whisper-outgoing')) == -1) {
+    if ($('#whisper-outgoing').is(":visible")) {
       // ...fade out.
-      $('#whisper_outgoing').fadeOut('fast');
+      $('#whisper-outgoing').fadeOut('fast');
     }
   }
 
