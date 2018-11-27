@@ -242,6 +242,7 @@ var Whisper = {
     Whisper.storage.jid = null;
     Whisper.storage.sid = null;
     Whisper.storage.rid = null;
+    // test
 
     console.log('JID/SID/RID removed from sessionStorage.');
     console.log('Whisper.storage JID: '+Whisper.storage.jid+' and SID: '+Whisper.storage.sid+' and RID: '+Whisper.storage.rid);
